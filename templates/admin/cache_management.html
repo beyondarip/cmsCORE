@@ -1,0 +1,321 @@
+{% extends "admin/base_admin.html" %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-8 bg-gray-50 min-h-screen">
+    <div class="mb-8">
+        <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight">{{ title }}</h1>
+        <p class="mt-2 text-lg text-gray-600">Manage your application cache settings and performance</p>
+    </div>
+    
+    {% if messages %}
+    <div class="mb-8 space-y-4">
+        {% for message in messages %}
+        <div class="rounded-lg p-4 border-l-4 shadow-md animate-fadeIn transition-all duration-300 ease-in-out 
+            {% if message.tags == 'success' %}bg-green-50 border-green-500 text-green-700
+            {% elif message.tags == 'error' %}bg-red-50 border-red-500 text-red-700
+            {% else %}bg-blue-50 border-blue-500 text-blue-700{% endif %}">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    {% if message.tags == 'success' %}
+                    <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    {% elif message.tags == 'error' %}
+                    <svg class="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                    {% else %}
+                    <svg class="h-5 w-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                    </svg>
+                    {% endif %}
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium">{{ message }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Status Overview Cards -->
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+        <!-- Cache Status Card -->
+        <div class="bg-white overflow-hidden shadow rounded-lg border border-gray-200 hover:shadow-lg transition-shadow duration-300">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-indigo-500 rounded-md p-3">
+                        <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate uppercase tracking-wider">Cache Status</dt>
+                            <dd>
+                                <div class="flex items-center mt-1">
+                                    <span class="text-2xl font-semibold text-gray-900">
+                                        {% if cache_status.global_enabled %}Enabled{% else %}Disabled{% endif %}
+                                    </span>
+                                    <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                        {% if cache_status.global_enabled %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                        {% if cache_status.global_enabled %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </div>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeout Card -->
+        <div class="bg-white overflow-hidden shadow rounded-lg border border-gray-200 hover:shadow-lg transition-shadow duration-300">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-purple-500 rounded-md p-3">
+                        <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate uppercase tracking-wider">Default Timeout</dt>
+                            <dd>
+                                <div class="mt-1">
+                                    <span class="text-2xl font-semibold text-gray-900">
+                                        {{ cache_status.timeout|divisibleby:60 }} min
+                                    </span>
+                                    <span class="text-sm text-gray-500 block mt-1">{{ cache_status.timeout }} seconds</span>
+                                </div>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backend Card -->
+        <div class="bg-white overflow-hidden shadow rounded-lg border border-gray-200 hover:shadow-lg transition-shadow duration-300">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-blue-500 rounded-md p-3">
+                        <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate uppercase tracking-wider">Cache Backend</dt>
+                            <dd>
+                                <div class="mt-1">
+                                    <span class="text-2xl font-semibold text-gray-900">
+                                        {{ cache_status.backend|cut:"django.core.cache.backends."|cut:"."|title }}
+                                    </span>
+                                </div>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Cache Settings -->
+    <div class="bg-white shadow-lg rounded-xl overflow-hidden mb-8 border border-gray-200 transition-all duration-300 hover:shadow-xl">
+        <div class="px-6 py-5 border-b border-gray-200 bg-gray-50">
+            <div class="flex items-center">
+                <svg class="h-5 w-5 text-gray-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <h2 class="text-xl font-bold text-gray-800">Global Cache Settings</h2>
+            </div>
+        </div>
+        
+        <div class="px-6 py-6">
+            <p class="text-gray-600 mb-6">
+                Toggle caching across all views. When disabled, no pages will be cached regardless of individual settings.
+            </p>
+            
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="toggle_global">
+                <input type="hidden" name="cache_enabled" value="{% if cache_status.global_enabled %}false{% else %}true{% endif %}">
+                <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white 
+                    {% if cache_status.global_enabled %}
+                    bg-red-600 hover:bg-red-700 focus:ring-red-500
+                    {% else %}
+                    bg-green-600 hover:bg-green-700 focus:ring-green-500
+                    {% endif %}
+                    focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200">
+                    
+                    {% if cache_status.global_enabled %}
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                    Disable Global Cache
+                    {% else %}
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Enable Global Cache
+                    {% endif %}
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cache Clear -->
+    <div class="bg-white shadow-lg rounded-xl overflow-hidden mb-8 border border-gray-200 transition-all duration-300 hover:shadow-xl">
+        <div class="px-6 py-5 border-b border-gray-200 bg-gray-50">
+            <div class="flex items-center">
+                <svg class="h-5 w-5 text-gray-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <h2 class="text-xl font-bold text-gray-800">Clear Cache</h2>
+            </div>
+        </div>
+        
+        <div class="px-6 py-6">
+            <p class="text-gray-600 mb-6">
+                Choose a specific view to clear its cache, or clear all cached views at once.
+            </p>
+            
+            <form method="post" class="sm:flex sm:items-end">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="clear_cache">
+                
+                <div class="w-full sm:max-w-xs">
+                    <label for="view_select" class="block text-sm font-medium text-gray-700 mb-1">Select View</label>
+                    <select name="view_name" id="view_select" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        <option value="all">All Views</option>
+                        {% for view in cache_status.cacheable_views %}
+                        <option value="{{ view.name }}">{{ view.description }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mt-4 sm:mt-0 sm:ml-4">
+                    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200">
+                        <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Clear Selected Cache
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cached Views -->
+    <div class="bg-white shadow-lg rounded-xl overflow-hidden mb-8 border border-gray-200 transition-all duration-300 hover:shadow-xl">
+        <div class="px-6 py-5 border-b border-gray-200 bg-gray-50">
+            <div class="flex items-center">
+                <svg class="h-5 w-5 text-gray-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <h2 class="text-xl font-bold text-gray-800">Cached Views</h2>
+            </div>
+        </div>
+        
+        <div class="px-6 py-6">
+            <p class="text-gray-600 mb-6">
+                All views with cache enabled. Staff and superusers can override these settings temporarily by adding <code class="bg-gray-100 text-red-600 rounded px-1.5 py-0.5 text-sm font-mono">?cache=false</code> to the URL.
+            </p>
+            
+            <div class="bg-gray-50 rounded-lg overflow-hidden border border-gray-200 divide-y divide-gray-200">
+                {% for view in cache_status.cacheable_views %}
+                <div class="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between hover:bg-gray-100 transition-colors duration-150">
+                    <div class="mb-4 sm:mb-0">
+                        <h3 class="font-medium text-gray-900 text-lg">{{ view.description }}</h3>
+                        <div class="mt-2 flex items-center flex-wrap text-sm text-gray-500">
+                            <span class="mr-4 flex items-center">
+                                <svg class="mr-1.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                                </svg>
+                                <code class="bg-gray-100 text-indigo-600 rounded px-1.5 py-0.5 text-sm font-mono">{{ view.name }}</code>
+                            </span>
+                            {% if view.timeout %}
+                            <span class="flex items-center">
+                                <svg class="mr-1.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                {{ view.timeout|divisibleby:60 }} min
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="clear_cache">
+                            <input type="hidden" name="view_name" value="{{ view.name }}">
+                            <button type="submit" class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200">
+                                <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Clear Cache
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Developer Info -->
+    <div class="bg-white shadow-lg rounded-xl overflow-hidden mb-8 border border-gray-200 transition-all duration-300 hover:shadow-xl">
+        <div class="px-6 py-5 border-b border-gray-200 bg-gray-50">
+            <div class="flex items-center">
+                <svg class="h-5 w-5 text-gray-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                <h2 class="text-xl font-bold text-gray-800">Developer Information</h2>
+            </div>
+        </div>
+        
+        <div class="px-6 py-6">
+            <p class="text-gray-600 mb-6">
+                To add caching to a view, use the <code class="bg-gray-100 text-red-600 rounded px-1.5 py-0.5 text-sm font-mono">@togglable_cache</code> decorator:
+            </p>
+            
+            <div class="bg-gray-800 rounded-lg p-5 mb-6 overflow-x-auto">
+                <pre class="text-gray-100 text-sm font-mono"><span class="text-blue-400">from</span> apps.pages.utils <span class="text-blue-400">import</span> togglable_cache
+
+<span class="text-yellow-400">@togglable_cache</span>(
+    timeout=60*60,
+    key_prefix='my_view', 
+    description='Human Readable Description'
+)
+<span class="text-blue-400">def</span> <span class="text-green-400">my_view</span>(request):
+    <span class="text-gray-500"># View logic here</span>
+    <span class="text-blue-400">return</span> render(request, 'template.html', context)</pre>
+            </div>
+            
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-yellow-800">Important parameters:</h3>
+                        <div class="mt-2 text-sm text-yellow-700">
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li><code class="bg-yellow-100 text-red-600 rounded px-1 py-0.5 text-xs font-mono">timeout</code>: Cache timeout in seconds (default: {{ cache_status.timeout }} seconds)</li>
+                                <li><code class="bg-yellow-100 text-red-600 rounded px-1 py-0.5 text-xs font-mono">key_prefix</code>: Unique identifier for the cache key</li>
+                                <li><code class="bg-yellow-100 text-red-600 rounded px-1 py-0.5 text-xs font-mono">description</code>: Human-readable name shown in this admin panel</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

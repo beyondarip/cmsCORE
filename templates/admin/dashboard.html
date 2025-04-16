@@ -1,0 +1,294 @@
+{% extends "admin/base_admin.html" %}
+{% load static %}
+
+{% block title %}Dashboard - Matana CMS{% endblock %}
+{% block page_title %}Welcome back, {{ request.user.get_full_name|default:request.user.username }}{% endblock %}
+{% block page_subtitle %}Here's what's happening with your content{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Analytics Cards */
+    .analytics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .analytics-card {
+        background: white;
+        border-radius: 1.5rem;
+        padding: 1.5rem;
+        border: 1px solid #e5e7eb;
+        transition: all 0.3s ease;
+    }
+
+    .analytics-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    /* Activity Timeline */
+    .timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e5e7eb;
+    }
+
+    .timeline-item {
+        position: relative;
+        padding-bottom: 1.5rem;
+    }
+
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -2rem;
+        top: 0.25rem;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+        border: 2px solid white;
+        background: #4f46e5;
+    }
+
+    /* Quick Actions */
+    .quick-action {
+        transition: all 0.3s ease;
+    }
+
+    .quick-action:hover {
+        transform: translateY(-2px);
+    }
+
+    .quick-action:hover .quick-action-icon {
+        background: #4f46e5;
+        color: white;
+    }
+
+    .quick-action-icon {
+        transition: all 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Total Articles -->
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-blue-100">Total Articles</p>
+                    <h3 class="text-3xl font-bold mt-1">{{ total_articles }}</h3>
+                </div>
+                <div class="bg-blue-400/30 p-3 rounded-xl">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="mt-4 flex items-center gap-2 text-blue-100">
+                <span>Published: {{ published_count }}</span>
+                <span class="text-blue-200">•</span>
+                <span>Drafts: {{ draft_count }}</span>
+            </div>
+        </div>
+
+        <!-- Total Pages -->
+        <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-purple-100">Active Pages</p>
+                    <h3 class="text-3xl font-bold mt-1">{{ pages.count }}</h3>
+                </div>
+                <div class="bg-purple-400/30 p-3 rounded-xl">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6z"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="mt-4 text-purple-100">
+                Last updated {{ latest_page_update|date:"M d, Y" }}
+            </div>
+        </div>
+
+        <!-- Media Stats -->
+        <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-emerald-100">Media Files</p>
+                    <h3 class="text-3xl font-bold mt-1">{{ media_count }}</h3>
+                </div>
+                <div class="bg-emerald-400/30 p-3 rounded-xl">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="mt-4 text-emerald-100">
+                <!-- {{ storage_used }} used of {{ storage_limit }} -->
+            </div>
+        </div>
+
+        <!-- Categories -->
+        <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-amber-100">Categories</p>
+                    <h3 class="text-3xl font-bold mt-1">{{ categories.count }}</h3>
+                </div>
+                <div class="bg-amber-400/30 p-3 rounded-xl">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="mt-4 text-amber-100">
+                Most used: {{ most_used_category }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions & Recent Activity -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Quick Actions -->
+        <div class="lg:col-span-1 space-y-4">
+            <h3 class="text-lg font-semibold text-gray-900">Quick Actions</h3>
+            
+            <!-- New Article -->
+            <a href="{% url 'article_create' %}" 
+               class="group block bg-white p-4 rounded-xl border border-gray-200 hover:border-blue-500 hover:shadow-lg transition-all duration-200">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center group-hover:bg-blue-500 transition-colors duration-200">
+                        <svg class="w-6 h-6 text-blue-600 group-hover:text-white transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-900">New Article</h4>
+                        <p class="text-sm text-gray-500">Create a new article</p>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Edit Pages -->
+            <a href="{% url 'page_list' %}" 
+               class="group block bg-white p-4 rounded-xl border border-gray-200 hover:border-purple-500 hover:shadow-lg transition-all duration-200">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center group-hover:bg-purple-500 transition-colors duration-200">
+                        <svg class="w-6 h-6 text-purple-600 group-hover:text-white transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-900">Manage Pages</h4>
+                        <p class="text-sm text-gray-500">Edit website pages</p>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Media Library -->
+            <a href="{% url 'media:library' %}" 
+               class="group block bg-white p-4 rounded-xl border border-gray-200 hover:border-emerald-500 hover:shadow-lg transition-all duration-200">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center group-hover:bg-emerald-500 transition-colors duration-200">
+                        <svg class="w-6 h-6 text-emerald-600 group-hover:text-white transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-900">Media Library</h4>
+                        <p class="text-sm text-gray-500">Manage your media files</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Recent Articles -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 overflow-hidden">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="font-semibold text-gray-900">Recent Articles</h3>
+            </div>
+            <div class="divide-y divide-gray-200">
+                {% for article in articles|slice:":5" %}
+                <div class="p-6 flex items-center justify-between hover:bg-gray-50 transition-colors duration-150">
+                    <div class="flex items-center gap-4">
+                        {% if article.featured_image %}
+                        <img src="{{ article.featured_image }}" alt="" class="w-16 h-16 rounded-xl object-cover">
+                        {% else %}
+                        <div class="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center">
+                            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <h4 class="font-medium text-gray-900">{{ article.title }}</h4>
+                            <div class="flex items-center gap-3 mt-1">
+                                <span class="text-sm text-gray-500">{{ article.created_at|date:"M j, Y" }}</span>
+                                <span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+                                <span class="text-sm {% if article.status == 'published' %}text-green-600{% else %}text-amber-600{% endif %}">
+                                    {{ article.status|title }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{% url 'article_edit' pk=article.pk %}" 
+                       class="flex items-center gap-2 text-blue-600 hover:text-blue-700">
+                        <span>Edit</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            {% if articles.count > 5 %}
+            <div class="p-4 bg-gray-50 border-t border-gray-200">
+                <a href="{% url 'article_list' %}" class="text-sm text-blue-600 hover:text-blue-700 flex items-center justify-center gap-1">
+                    View all articles
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Category Modal -->
+{% include "admin/includes/category_modal.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openCategoryModal() {
+        document.getElementById('categoryModal').classList.remove('hidden');
+        document.getElementById('categoryModal').classList.add('flex');
+    }
+
+    function closeCategoryModal() {
+        document.getElementById('categoryModal').classList.add('hidden');
+        document.getElementById('categoryModal').classList.remove('flex');
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('categoryModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeCategoryModal();
+        }
+    });
+</script>
+{% endblock %} 

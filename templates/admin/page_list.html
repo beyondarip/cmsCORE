@@ -1,0 +1,139 @@
+{% extends "admin/base_admin.html" %}
+{% load static %}
+
+{% block title %}Pages - Matana CMS{% endblock %}
+{% block page_title %}Pages{% endblock %}
+{% block page_subtitle %}Manage your website pages{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Filter & Actions -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="flex justify-between items-center">
+            <!-- Search -->
+            <div class="w-72">
+                <div class="relative">
+                    <input type="text" 
+                           placeholder="Search pages..." 
+                           class="w-full pl-10 pr-4 py-2 border rounded-lg"
+                           id="searchInput">
+                    <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Create New -->
+            <!-- <a href="" 
+               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span>Create New Page</span>
+            </a> -->
+        </div>
+    </div>
+
+    <!-- Pages Grid -->
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for page in pages %}
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <!-- Preview Image -->
+            <div class="h-40 bg-gray-100 relative">
+                {% if page.preview_image %}
+                    <img src="{{ page.preview_image.url }}" alt="{{ page.title }}" class="w-full h-full object-cover">
+                {% else %}
+                    <div class="w-full h-full flex items-center justify-center text-gray-400">
+                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                {% endif %}
+                
+                <!-- Status Badge -->
+                <div class="absolute top-3 right-3">
+                    <span class="px-2 py-1 text-xs rounded-full {% if page.status == 'published' %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ page.status|title }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6">
+                <h3 class="font-semibold text-lg mb-2">{{ page.title }}</h3>
+                <p class="text-gray-500 text-sm mb-4">{{ page.slug }}</p>
+                
+                <!-- Meta Info -->
+                <div class="flex items-center justify-between text-sm text-gray-500">
+                    <span>{{ page.updated_at|date:"M d, Y" }}</span>
+                    <span>{{ page.template }}</span>
+                </div>
+
+                <!-- Actions -->
+                <div class="mt-4 pt-4 border-t flex justify-between items-center">
+                    <div class="flex gap-2">
+                        <a href="{% url 'page_edit' slug=page.slug %}" 
+                           class="px-3 py-1.5 text-sm border rounded hover:bg-gray-50">
+                            Edit
+                        </a>
+                        <a href="{{ page.get_absolute_url }}" 
+                           target="_blank"
+                           class="px-3 py-1.5 text-sm border rounded hover:bg-gray-50">
+                            View
+                        </a>
+                    </div>
+                    <button onclick="deletePage('{{ page.slug }}', '{{ page.title }}')"
+                            class="text-red-600 hover:text-red-700">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center py-12">
+            <div class="text-gray-400 mb-4">
+                <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No pages found</h3>
+            <p class="text-gray-500">Get started by creating a new page</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+// Search functionality
+document.getElementById('searchInput').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    document.querySelectorAll('.grid > div').forEach(card => {
+        const title = card.querySelector('h3').textContent.toLowerCase();
+        const slug = card.querySelector('p').textContent.toLowerCase();
+        if (title.includes(searchTerm) || slug.includes(searchTerm)) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+});
+
+// Delete functionality
+function deletePage(slug, title) {
+    if (confirm(`Are you sure you want to delete "${title}"?`)) {
+        fetch(`/dashboard/pages/${slug}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        }).then(response => {
+            if (response.ok) {
+                window.location.reload();
+            }
+        });
+    }
+}
+</script>
+{% endblock %} 

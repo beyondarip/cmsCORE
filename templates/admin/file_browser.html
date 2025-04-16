@@ -1,0 +1,432 @@
+{% extends "admin/base_admin.html" %}
+{% load static %}
+
+{% block title %}{{ title }} - Secure File Browser{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_subtitle %}Browse and download files securely{% endblock %}
+
+{% block extra_css %}
+<style>
+    .file-browser {
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+    }
+    
+    .file-header {
+        background-color: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 1rem 1.5rem;
+    }
+    
+    .file-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        transition: all 0.2s;
+    }
+    
+    .file-item:hover {
+        background-color: #f8fafc;
+    }
+    
+    .file-icon {
+        width: 2rem;
+        height: 2rem;
+        flex-shrink: 0;
+        margin-right: 1rem;
+    }
+    
+    .file-name {
+        flex-grow: 1;
+        font-weight: 500;
+        color: #4a5568;
+    }
+    
+    .file-size, .file-modified {
+        padding: 0 1rem;
+        color: #718096;
+        font-size: 0.875rem;
+    }
+    
+    .breadcrumb {
+        display: flex;
+        flex-wrap: wrap;
+        padding: 1rem 1.5rem;
+        background-color: #edf2f7;
+        border-radius: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .breadcrumb-item {
+        display: flex;
+        align-items: center;
+    }
+    
+    .breadcrumb-item a {
+        color: #4a5568;
+        text-decoration: none;
+    }
+    
+    .breadcrumb-item a:hover {
+        text-decoration: underline;
+    }
+    
+    .breadcrumb-separator {
+        margin: 0 0.5rem;
+        color: #a0aec0;
+    }
+    
+    .directory {
+        color: #3182ce;
+    }
+    
+    .download-icon {
+        color: #38a169;
+    }
+    
+    .alert-box {
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border-radius: 0.5rem;
+        background-color: #fff5f5;
+        color: #c53030;
+        border: 1px solid #feb2b2;
+    }
+    
+    .file-item.directory:hover {
+        background-color: #ebf4ff;
+    }
+    
+    .empty-dir-message {
+        padding: 2rem;
+        text-align: center;
+        color: #718096;
+    }
+    
+    .action-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.15s ease;
+    }
+    
+    .btn-primary {
+        background-color: #4f46e5;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background-color: #4338ca;
+    }
+    
+    .backup-success-message {
+        background-color: #ecfdf5;
+        border-left: 4px solid #10b981;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border-radius: 0.375rem;
+    }
+    
+    .backup-error-message {
+        background-color: #fee2e2;
+        border-left: 4px solid #ef4444;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border-radius: 0.375rem;
+    }
+    
+    .toast {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        background-color: #1f2937;
+        color: white;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        z-index: 50;
+        max-width: 24rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        transform: translateY(100%);
+        opacity: 0;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    
+    .toast.show {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    
+    .toast-success {
+        background-color: #065f46;
+    }
+    
+    .toast-error {
+        background-color: #b91c1c;
+    }
+    
+    .toast-loading {
+        background-color: #1e40af;
+    }
+    
+    .toast-spinner {
+        width: 1.5rem;
+        height: 1.5rem;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+<div class="mb-6">
+    {% for message in messages %}
+    <div class="p-4 rounded-lg {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Action Bar -->
+<div class="action-bar">
+    <div>
+        {% if request.user.is_superuser %}
+        <button id="triggerBackupBtn" class="btn btn-primary" onclick="triggerBackup()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+            </svg>
+            Create Project Backup
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Security warning -->
+<div class="alert-box">
+    <p><strong>Security Notice:</strong> You are browsing a secure file area. All access is logged and monitored.</p>
+</div>
+
+<!-- Breadcrumb navigation -->
+<nav class="breadcrumb">
+    <div class="breadcrumb-item">
+        <a href="{% url 'secure_file_browser_root' token=token %}">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+            </svg>
+            Root
+        </a>
+    </div>
+    
+    {% for crumb in breadcrumbs %}
+    <div class="breadcrumb-separator">/</div>
+    <div class="breadcrumb-item">
+        <a href="{% url 'secure_file_browser' token=token subpath=crumb.path %}">{{ crumb.name }}</a>
+    </div>
+    {% endfor %}
+    
+    {% if not is_root and not breadcrumbs %}
+    <div class="breadcrumb-separator">/</div>
+    <div class="breadcrumb-item">{{ current_dir }}</div>
+    {% endif %}
+</nav>
+
+<!-- File browser -->
+<div class="file-browser">
+    <div class="file-header flex justify-between items-center">
+        <h2 class="text-lg font-semibold text-gray-900">{{ current_dir }}</h2>
+        <div>
+            <span class="text-sm text-gray-600">{{ files|length }} items</span>
+        </div>
+    </div>
+    
+    {% if parent_dir is not None %}
+    <!-- Parent directory link -->
+    <a href="{% url 'secure_file_browser' token=token subpath=parent_dir %}" class="file-item directory">
+        <div class="file-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+            </svg>
+        </div>
+        <div class="file-name">..</div>
+        <div class="file-size"></div>
+        <div class="file-modified"></div>
+    </a>
+    {% endif %}
+    
+    {% if files %}
+    {% for file in files %}
+    <div class="file-item {% if file.is_dir %}directory{% endif %}">
+        <div class="file-icon">
+            {% if file.is_dir %}
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="text-blue-500">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+            </svg>
+            {% else %}
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="text-gray-500">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            {% endif %}
+        </div>
+        
+        {% if file.is_dir %}
+        <a href="{% url 'secure_file_browser' token=token subpath=file.rel_path %}" class="file-name">
+            {{ file.name }}
+        </a>
+        {% else %}
+        <a href="{% url 'secure_file_browser' token=token subpath=file.rel_path %}" class="file-name" download>
+            {{ file.name }}
+        </a>
+        {% endif %}
+        
+        <div class="file-size">{{ file.size_formatted }}</div>
+        <div class="file-modified">{{ file.modified_formatted }}</div>
+        
+        {% if not file.is_dir %}
+        <a href="{% url 'secure_file_browser' token=token subpath=file.rel_path %}" 
+           class="download-icon ml-4" 
+           title="Download file" 
+           download>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+        </a>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-dir-message">
+        <p>This directory is empty.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Toast for notifications -->
+<div id="toast" class="toast">
+    <div id="toastSpinner" class="toast-spinner" style="display: none;"></div>
+    <span id="toastMessage"></span>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function triggerBackup() {
+        // Disable the button to prevent multiple clicks
+        const button = document.getElementById('triggerBackupBtn');
+        button.disabled = true;
+        button.innerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" stroke-dasharray="30 30" stroke-dashoffset="0" fill="none"></circle>
+                              <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="4" stroke-linecap="round"></path>
+                            </svg> Creating Backup...`;
+        
+        // Show a toast notification
+        showToast('Creating project backup in the background...', 'loading');
+        
+        // Make an AJAX request to the backup endpoint
+        fetch('/admin/api/backup/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                background: true,
+                token: '{{ token }}'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Backup started successfully! It will appear in this directory when complete.', 'success');
+            } else {
+                showToast('Error: ' + (data.error || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            showToast('Error: ' + error.message, 'error');
+        })
+        .finally(() => {
+            // Re-enable the button after a delay
+            setTimeout(() => {
+                button.disabled = false;
+                button.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                                    </svg> Create Project Backup`;
+            }, 3000);
+        });
+    }
+    
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        const toastSpinner = document.getElementById('toastSpinner');
+        
+        // Set message
+        toastMessage.textContent = message;
+        
+        // Remove existing classes
+        toast.classList.remove('toast-success', 'toast-error', 'toast-loading');
+        
+        // Add appropriate class based on type
+        toast.classList.add('toast-' + type);
+        
+        // Show/hide spinner based on type
+        if (type === 'loading') {
+            toastSpinner.style.display = 'block';
+        } else {
+            toastSpinner.style.display = 'none';
+        }
+        
+        // Show the toast
+        toast.classList.add('show');
+        
+        // Hide the toast after a delay unless it's a loading message
+        if (type !== 'loading') {
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 5000);
+        }
+    }
+    
+    // Helper function to get CSRF token from cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %} 

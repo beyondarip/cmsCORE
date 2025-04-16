@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load image_optimizer %}
+{% load static %}
+
+{% block title %}Under Maintenance - Matana University{% endblock %}
+
+{% block extra_css %}
+<style>
+    .maintenance-bg {
+        background: linear-gradient(135deg, #004AAD 0%, #003880 100%);
+        min-height: 100vh;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .maintenance-pattern {
+        position: absolute;
+        inset: 0;
+        opacity: 0.1;
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    .maintenance-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 1rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .countdown-box {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(5px);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        text-align: center;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        background: rgba(220, 38, 38, 0.1);
+        color: #DC2626;
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-weight: 500;
+    }
+
+    .pulse {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #DC2626;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+        animation: pulse 2s infinite;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="maintenance-bg">
+    <div class="maintenance-pattern"></div>
+    
+    <div class="container mx-auto px-4 py-20">
+        <div class="max-w-3xl mx-auto">
+            <div class="maintenance-card p-8">
+                <!-- Status Badge -->
+                <div class="text-center mb-8">
+                    <span class="status-badge">
+                        <span class="pulse"></span>
+                        Maintenance in Progress
+                    </span>
+                </div>
+
+                <!-- Main Content -->
+                <h1 class="text-4xl font-bold text-gray-900 mb-4 text-center">
+                    We're Making Things Better
+                </h1>
+                
+                <p class="text-gray-600 text-center mb-8">
+                    {{ maintenance_message|default:"Our team is performing scheduled maintenance. We'll be back soon!" }}
+                </p>
+
+                <!-- Estimated Time -->
+                {% if estimated_duration %}
+                <div class="countdown-box mb-8">
+                    <p class="text-white mb-2">Estimated Duration:</p>
+                    <p class="text-2xl font-bold text-white">{{ estimated_duration }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Contact Info -->
+                <div class="bg-blue-50 p-6 rounded-xl">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">
+                        Need assistance?
+                    </h3>
+                    <p class="text-gray-600">
+                        Contact our support team:<br>
+                        <a href="mailto:{{ contact_email }}" class="text-blue-600 hover:text-blue-800">
+                            {{ contact_email }}
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

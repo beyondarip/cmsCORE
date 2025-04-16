@@ -1,0 +1,64 @@
+{% extends "admin/base_admin.html" %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-extrabold text-gray-800 mb-4">Git Pull di Server</h1>
+
+    <div class="bg-white shadow rounded-lg p-6">
+        <p class="mb-4 text-gray-700">
+            Klik tombol di bawah untuk menjalankan <code>git pull</code> di server production Anda.
+            <strong class="text-red-600">PERHATIAN: Ini akan langsung memperbarui codebase website Anda dengan perubahan terbaru dari repositori Git. Gunakan dengan hati-hati!</strong>
+        </p>
+
+        <button id="gitPullButton" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="button">
+            Jalankan Git Pull
+        </button>
+
+        <div id="outputArea" class="mt-6 p-4 bg-gray-100 rounded-lg whitespace-pre-wrap font-mono text-sm hidden">
+            <h2 class="text-lg font-semibold mb-2">Output Git Pull:</h2>
+            <pre><code id="outputCode"></code></pre>
+            <pre><code id="errorCode" class="text-red-600"></code></pre>
+        </div>
+
+        <div id="errorArea" class="mt-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg hidden">
+            <h2 class="text-lg font-semibold mb-2">Error:</h2>
+            <p id="errorMessage"></p>
+            <pre><code id="errorDetailCode" class="font-mono text-sm"></code></pre>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('gitPullButton').addEventListener('click', function() {
+        fetch('{% url "git_pull" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}' // Penting untuk CSRF protection
+            },
+            body: JSON.stringify({}) // Kirim body JSON kosong
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw err; }); // Tangani error response JSON
+            }
+            return response.json();
+        })
+        .then(data => {
+            document.getElementById('outputCode').textContent = data.output;
+            document.getElementById('errorCode').textContent = data.error_output;
+
+            document.getElementById('outputArea').classList.remove('hidden');
+            document.getElementById('errorArea').classList.add('hidden'); // Pastikan error area hidden jika sukses
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('errorMessage').textContent = error.error || 'Terjadi kesalahan tak terduga.'; // Ambil pesan error dari JSON atau pesan default
+            document.getElementById('errorDetailCode').textContent = error.error_output || ''; // Tampilkan detail error jika ada
+            document.getElementById('errorArea').classList.remove('hidden');
+            document.getElementById('outputArea').classList.add('hidden'); // Pastikan output area hidden jika error
+        });
+    });
+</script>
+{% endblock %}

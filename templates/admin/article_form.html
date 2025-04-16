@@ -1,0 +1,544 @@
+{% extends "admin/base_admin.html" %}
+{% load static %}
+
+{% block title %}{{ title }} - Matana CMS{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_subtitle %}Create and publish engaging content{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Form Layout */
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        gap: 2rem;
+    }
+
+    @media (max-width: 1024px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Card Styles */
+    .content-card {
+        background: white;
+        border-radius: 1rem;
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .content-card:hover {
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    .card-header {
+        padding: 1.25rem;
+        border-bottom: 1px solid #e5e7eb;
+        background: #f8fafc;
+    }
+
+    .card-body {
+        padding: 1.25rem;
+    }
+
+    /* Form Controls */
+    .form-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 0.75rem;
+        transition: all 0.3s ease;
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+
+    .form-input:focus {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        outline: none;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 500;
+        font-size: 0.875rem;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    /* CKEditor Customization */
+    .django-ckeditor-widget {
+        width: 100% !important;
+    }
+
+    /* Image Upload */
+    .image-drop-zone {
+        border: 2px dashed #e5e7eb;
+        border-radius: 0.75rem;
+        padding: 2rem;
+        text-align: center;
+        background: #f8fafc;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .image-drop-zone:hover {
+        border-color: #4f46e5;
+        background: rgba(79, 70, 229, 0.05);
+    }
+
+    .preview-image {
+        max-height: 200px;
+        width: 100%;
+        object-fit: cover;
+        border-radius: 0.75rem;
+    }
+
+    /* Save Button */
+    .save-button {
+        background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.75rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+    }
+
+    .save-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4);
+    }
+
+    /* Upload Progress */
+    .upload-progress {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        background: white;
+        padding: 1rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        z-index: 50;
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if messages %}
+<div class="mb-6">
+    {% for message in messages %}
+    <div class="p-4 rounded-lg {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<form id="articleForm" method="POST" action="{% url 'article_save' %}">
+    {% csrf_token %}
+    {% if article %}
+        <input type="hidden" name="article_id" value="{{ article.id }}">
+    {% endif %}
+    <input type="hidden" id="featured_image_input" name="featured_image" value="{{ article.featured_image|default:'' }}">
+
+    <div class="form-grid">
+        <!-- Main Content -->
+        <div class="space-y-6">
+            <!-- Title & Excerpt -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="text-lg font-semibold text-gray-900">Article Details</h2>
+                </div>
+                <div class="card-body space-y-6">
+                    <div>
+                        <label class="form-label">Title <span class="text-red-500">*</span></label>
+                        <input type="text" name="title" required
+                               class="form-input text-xl"
+                               value="{{ article.title|default:'' }}"
+                               placeholder="Enter article title...">
+                    </div>
+                    <div>
+                        <label class="form-label">Excerpt <span class="text-red-500">*</span></label>
+                        <textarea name="excerpt" rows="3" required
+                                  class="form-input"
+                                  placeholder="Write a brief summary...">{{ article.excerpt|default:'' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Editor -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="text-lg font-semibold text-gray-900">Content <span class="text-red-500">*</span></h2>
+                </div>
+                <div class="card-body">
+                    {{ form.content }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Article Status -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="text-lg font-semibold text-gray-900">Article Status</h2>
+                </div>
+                <div class="card-body space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-gray-700">Current Status:</span>
+                        <span class="px-3 py-1 rounded-full text-sm font-medium
+                            {% if article.status == 'published' %}bg-green-100 text-green-800
+                            {% elif article.status == 'rejected' %}bg-red-100 text-red-800
+                            {% elif article.status == 'on_review' %}bg-blue-100 text-blue-800
+                            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                            {{ article.status|title }}
+                        </span>
+                    </div>
+
+                    {% if article.review_history.exists %}
+                    <div class="mt-4">
+                        <h3 class="text-sm font-medium text-gray-700 mb-2">Review History</h3>
+                        <div class="space-y-3">
+                            {% for review in article.review_history.all %}
+                            <div class="bg-gray-50 p-3 rounded-lg">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <span class="text-sm font-medium">{{ review.reviewed_by.get_full_name|default:review.reviewed_by.username }}</span>
+                                        <span class="text-xs text-gray-500 ml-2">{{ review.created_at|date:"M j, Y H:i" }}</span>
+                                    </div>
+                                    <span class="px-2 py-1 rounded-full text-xs font-medium
+                                        {% if review.status == 'published' %}bg-green-100 text-green-800
+                                        {% elif review.status == 'rejected' %}bg-red-100 text-red-800
+                                        {% elif review.status == 'on_review' %}bg-blue-100 text-blue-800
+                                        {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                        {{ review.status|title }}
+                                    </span>
+                                </div>
+                                {% if review.comment %}
+                                <p class="mt-2 text-sm text-gray-600">{{ review.comment }}</p>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if article.status == 'rejected' and article.review_comment %}
+                    <div class="mt-4 p-4 bg-red-50 rounded-lg">
+                        <h3 class="text-sm font-medium text-red-800 mb-2">Rejection Reason</h3>
+                        <p class="text-sm text-red-700">{{ article.review_comment }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if request.user.is_superuser %}
+                    <div class="mt-4 pt-4 border-t">
+                        <h3 class="text-sm font-medium text-gray-700 mb-2">Review Actions</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Change Status</label>
+                                <select name="status" class="form-input">
+                                    <option value="pending" {% if article.status == 'pending' %}selected{% endif %}>Pending</option>
+                                    <option value="on_review" {% if article.status == 'on_review' %}selected{% endif %}>On Review</option>
+                                    <option value="published" {% if article.status == 'published' %}selected{% endif %}>Published</option>
+                                    <option value="rejected" {% if article.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Review Comment</label>
+                                <textarea name="review_comment" rows="3" 
+                                          class="form-input"
+                                          placeholder="Add a comment about your review decision...">{{ article.review_comment|default:'' }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="flex items-center justify-between pt-4 border-t">
+                        <button type="submit" 
+                                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                            {% if article.status == 'published' %}
+                                Submit Update
+                            {% else %}
+                                Save Changes
+                            {% endif %}
+                        </button>
+                        {% if article.status == 'rejected' and article.created_by == request.user %}
+                        <button type="submit" 
+                                name="resubmit"
+                                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                            Resubmit for Review
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category -->
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-lg font-semibold text-gray-900">Category <span class="text-red-500">*</span></h2>
+                        <button type="button" 
+                                onclick="openCategoryModal()"
+                                class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                            + New Category
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <select name="category" required class="form-input">
+                        <option value="">Select Category</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}" 
+                                {% if article.category_id == category.id %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Featured Image -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="text-lg font-semibold text-gray-900">Featured Image</h2>
+                </div>
+                <div class="card-body">
+                    <div class="image-drop-zone cursor-pointer rounded-xl overflow-hidden">
+                        {% if article.featured_image %}
+                            <div class="relative group">
+                                <img src="{{ article.featured_image }}" 
+                                     alt="Featured image" 
+                                 class="preview-image">
+                                <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 
+                                            transition-opacity duration-200 flex items-center justify-center gap-3">
+                                    <button type="button" onclick="changeFeaturedImage(event)" 
+                                            class="action-btn bg-white/90 hover:bg-white">
+                                        <i class="fas fa-edit"></i>
+                                        <span>Change</span>
+                                    </button>
+                                    <button type="button" onclick="removeFeaturedImage(event)"
+                                            class="action-btn bg-red-500/90 hover:bg-red-500 text-white">
+                                        <i class="fas fa-trash-alt"></i>
+                                        <span>Remove</span>
+                                    </button>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="space-y-2">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">Upload Image</p>
+                                    <p class="text-xs text-gray-500">Click to browse from media library</p>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEO Settings -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="text-lg font-semibold text-gray-900">SEO Settings</h2>
+                </div>
+                <div class="card-body space-y-4">
+                    <div>
+                        <label class="form-label">Meta Description</label>
+                        <textarea name="meta_description" rows="3" 
+                                  class="form-input"
+                                  placeholder="SEO description...">{{ article.meta_description|default:'' }}</textarea>
+                    </div>
+                    <div>
+                        <label class="form-label">Meta Keywords</label>
+                        <input type="text" name="meta_keywords" 
+                               class="form-input"
+                               value="{{ article.meta_keywords|default:'' }}"
+                               placeholder="keyword1, keyword2, ...">
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="is_featured" id="is_featured"
+                               class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                               {% if article.is_featured %}checked{% endif %}>
+                        <label for="is_featured" class="ml-2 text-sm text-gray-700">
+                            Feature this article
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Upload Progress -->
+<div id="uploadProgress" class="upload-progress">
+    <p class="text-sm">Uploading image...</p>
+</div>
+
+<!-- Category Modal -->
+<div id="categoryModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold text-gray-900">Create New Category</h3>
+            <button type="button" onclick="closeCategoryModal()" class="text-gray-400 hover:text-gray-500">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <form action="{% url 'category_create' %}" method="POST" class="space-y-6">
+            {% csrf_token %}
+            <div>
+                <label class="form-label">Category Name</label>
+                <input type="text" name="new_category" 
+                       class="form-input"
+                       required
+                       placeholder="Enter category name">
+            </div>
+            <div>
+                <label class="form-label">URL Slug (optional)</label>
+                <input type="text" name="category_slug" 
+                       class="form-input"
+                       placeholder="category-slug">
+            </div>
+            <button type="submit"
+                    class="w-full save-button">
+                Create Category
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ form.media }}
+<script>
+    // Media Library Popup Handler
+    function openMediaLibrary(callback) {
+        const width = Math.min(1200, window.innerWidth * 0.9);
+        const height = Math.min(800, window.innerHeight * 0.9);
+        const left = (window.innerWidth - width) / 2;
+        const top = (window.innerHeight - height) / 2;
+        
+        // Store callback for later use
+        window.handleMediaSelect = function(mediaData) {
+            console.log('Media selected:', mediaData); // Debug log
+            
+            // Handle both old and new response format
+            const url = mediaData.url || mediaData;
+            callback(url);
+        };
+        
+        const mediaPopup = window.open(
+            '{% url "media:library" %}?mode=select',
+            'Media Library',
+            `width=${width},height=${height},top=${top},left=${left},scrollbars=yes`
+        );
+
+        // Add error handling for popup blocker
+        if (!mediaPopup || mediaPopup.closed || typeof mediaPopup.closed === 'undefined') {
+            console.error('Popup blocked or failed to open');
+            showNotification('Please allow popups for the media library', 'error');
+        }
+    }
+
+    // Featured Image Functions
+    function changeFeaturedImage(event) {
+        event.preventDefault();
+        openMediaLibrary((url) => {
+            document.getElementById('featured_image_input').value = url;
+            updateFeaturedImagePreview(url);
+        });
+    }
+
+    function updateFeaturedImagePreview(url) {
+        console.log('Updating preview with:', url); // Debug log
+        const dropZone = document.querySelector('.image-drop-zone');
+        dropZone.innerHTML = `
+            <div class="relative group">
+                <img src="${url}" alt="Featured image" class="preview-image">
+                <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 
+                            transition-opacity duration-200 flex items-center justify-center gap-3">
+                    <button type="button" onclick="changeFeaturedImage(event)" 
+                            class="action-btn bg-white/90 hover:bg-white px-4 py-2 rounded-lg">
+                        <i class="fas fa-edit"></i>
+                        <span>Change</span>
+                    </button>
+                    <button type="button" onclick="removeFeaturedImage(event)"
+                            class="action-btn bg-red-500/90 hover:bg-red-500 text-white px-4 py-2 rounded-lg">
+                        <i class="fas fa-trash-alt"></i>
+                        <span>Remove</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    function removeFeaturedImage(event) {
+        event.preventDefault();
+        document.getElementById('featured_image_input').value = '';
+        const dropZone = document.querySelector('.image-drop-zone');
+        dropZone.innerHTML = `
+            <div class="space-y-2">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <div>
+                    <p class="text-sm font-medium text-gray-900">Upload Image</p>
+                    <p class="text-xs text-gray-500">Click to browse from media library</p>
+                </div>
+            </div>
+        `;
+    }
+
+    // Add click handler for image drop zone
+    document.querySelector('.image-drop-zone').addEventListener('click', function(e) {
+        if (!e.target.closest('button')) { // Only trigger if not clicking buttons
+            changeFeaturedImage(e);
+        }
+    });
+
+    // Notification function
+    function showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg ${
+            type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        } text-white z-50`;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+
+    // Modal functions
+    function openCategoryModal() {
+        document.getElementById('categoryModal').classList.remove('hidden');
+        document.getElementById('categoryModal').classList.add('flex');
+    }
+
+    function closeCategoryModal() {
+        document.getElementById('categoryModal').classList.add('hidden');
+        document.getElementById('categoryModal').classList.remove('flex');
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('categoryModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeCategoryModal();
+        }
+    });
+</script>
+{% endblock %} 

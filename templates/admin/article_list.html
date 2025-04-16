@@ -1,0 +1,473 @@
+{% extends "admin/base_admin.html" %}
+{% load static %}
+
+{% block title %}Articles - Matana CMS{% endblock %}
+{% block page_title %}Articles{% endblock %}
+{% block page_subtitle %}Manage all your articles in one place{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Filter Bar */
+    .filter-bar {
+        background: white;
+        border-radius: 1rem;
+        border: 1px solid #e5e7eb;
+        padding: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    /* Search Input */
+    .search-wrapper {
+        position: relative;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 0.75rem;
+        padding-left: 2.75rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 0.75rem;
+        transition: all 0.3s ease;
+    }
+
+    .search-input:focus {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+    }
+
+    /* Table Styles */
+    .table-container {
+        background: white;
+        border-radius: 1rem;
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+    }
+
+    .table-header {
+        background: #f8fafc;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    /* Status Badge */
+    .status-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .status-draft {
+        background: #fff7ed;
+        color: #9a3412;
+    }
+
+    .status-published {
+        background: #ecfdf5;
+        color: #065f46;
+    }
+
+    /* Action Buttons */
+    .action-button {
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .action-button:hover {
+        background: #f3f4f6;
+    }
+
+    /* Bulk Actions */
+    .bulk-actions {
+        display: none;
+        animation: slideDown 0.3s ease;
+    }
+
+    .bulk-actions.show {
+        display: flex;
+    }
+
+    @keyframes slideDown {
+        from { transform: translateY(-1rem); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Checkbox Custom Style */
+    .custom-checkbox {
+        width: 1.25rem;
+        height: 1.25rem;
+        border-radius: 0.375rem;
+        border: 2px solid #e5e7eb;
+        transition: all 0.2s ease;
+    }
+
+    .custom-checkbox:checked {
+        background-color: #4f46e5;
+        border-color: #4f46e5;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1.5rem;
+    }
+
+    .empty-state-icon {
+        background: #f3f4f6;
+        width: 4rem;
+        height: 4rem;
+        border-radius: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Actions Bar -->
+    <div class="flex justify-between items-center">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'article_create' %}" 
+               class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                New Article
+            </a>
+            <div class="bulk-actions items-center gap-4" id="bulkActions">
+                <button class="text-red-600 hover:text-red-700 flex items-center gap-2" onclick="confirmBulkDelete()">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    Delete Selected
+                </button>
+                <button class="text-green-600 hover:text-green-700 flex items-center gap-2" onclick="publishSelected()">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Publish Selected
+                </button>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <select class="search-input" onchange="updateFilters()" id="categoryFilter">
+                <option value="">All Categories</option>
+                {% for category in categories %}
+                <option value="{{ category.id }}" {% if selected_category == category.id %}selected{% endif %}>
+                    {{ category.name }} ({{ category.article_count }})
+                </option>
+                {% endfor %}
+            </select>
+            <select class="search-input" onchange="updateFilters()" id="statusFilter">
+                <option value="">All Status</option>
+                <option value="published" {% if selected_status == 'published' %}selected{% endif %}>Published</option>
+                <option value="draft" {% if selected_status == 'draft' %}selected{% endif %}>Draft</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="filter-bar">
+        <div class="search-wrapper">
+            <svg class="search-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <input type="search" 
+                   id="searchInput"
+                   placeholder="Search articles..." 
+                   class="search-input"
+                   value="{{ search_query }}">
+        </div>
+    </div>
+
+    <!-- Articles Table -->
+    <div class="table-container">
+        <div class="table-header flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-gray-900">All Articles</h2>
+            <span class="text-sm text-gray-600">{{ articles.paginator.count }} articles total</span>
+        </div>
+        
+        {% if articles %}
+        <table class="w-full">
+            <thead>
+                <tr class="bg-gray-50 border-b border-gray-200">
+                    <th class="px-6 py-4">
+                        <input type="checkbox" 
+                               class="custom-checkbox"
+                               onchange="toggleAllCheckboxes(this)">
+                    </th>
+                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900">Article</th>
+                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900">Category</th>
+                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
+                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900">Author</th>
+                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900">Last Updated</th>
+                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for article in articles %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <input type="checkbox" 
+                               class="custom-checkbox article-checkbox"
+                               value="{{ article.id }}"
+                               onchange="toggleBulkActions()">
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            {% if article.featured_image %}
+                            <img src="{{ article.featured_image }}" 
+                                 alt="{{ article.title }}" 
+                                 class="h-10 w-10 rounded-full object-cover mr-3">
+                            {% endif %}
+                            <div>
+                                <div class="font-medium text-gray-900">{{ article.title }}</div>
+                                <div class="text-sm text-gray-500">{{ article.excerpt|truncatechars:60 }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-sm text-gray-600">{{ article.category.name }}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="status-badge 
+                            {% if article.status == 'published' %}bg-green-100 text-green-800
+                            {% elif article.status == 'rejected' %}bg-red-100 text-red-800
+                            {% elif article.status == 'on_review' %}bg-blue-100 text-blue-800
+                            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                            {{ article.status|title }}
+                        </span>
+                        {% if article.status == 'rejected' and article.review_comment %}
+                        <div class="mt-1 text-xs text-red-600">
+                            {{ article.review_comment|truncatechars:50 }}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                                {{ article.created_by.get_full_name|default:article.created_by.username|make_list|first|upper }}
+                            </div>
+                            <span class="text-sm text-gray-600">
+                                {{ article.created_by.get_full_name|default:article.created_by.username }}
+                            </span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-sm text-gray-600">{{ article.updated_at|date:"M j, Y" }}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <a href="{% url 'article_edit' article.id %}" 
+                               class="action-button text-gray-600 hover:text-gray-900"
+                               title="Edit">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </a>
+                            <button onclick="toggleFeatured({{ article.id }}, {{ article.is_featured|lower }})"
+                                    class="action-button text-gray-600 hover:text-gray-900"
+                                    title="Toggle Featured">
+                                <svg class="w-5 h-5" fill="{% if article.is_featured %}currentColor{% else %}none{% endif %}" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                                </svg>
+                            </button>
+                            <a href="{% url 'article_detail' article.slug %}" 
+                               target="_blank"
+                               class="action-button text-gray-600 hover:text-gray-900"
+                               title="View">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                            </a>
+                            <button onclick="deleteArticle({{ article.id }}, '{{ article.title|escapejs }}')"
+                                    class="action-button text-red-600 hover:text-red-700"
+                                    title="Delete">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900">No articles found</h3>
+            <p class="mt-1 text-sm text-gray-500">Get started by creating your first article</p>
+            <div class="mt-6">
+                <a href="{% url 'article_create' %}" 
+                   class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
+                    Create Article
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Pagination -->
+    {% if articles.has_other_pages %}
+    <div class="flex justify-center gap-2">
+        {% if articles.has_previous %}
+        <a href="?page={{ articles.previous_page_number }}" 
+           class="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50">
+            Previous
+        </a>
+        {% endif %}
+
+        {% for num in articles.paginator.page_range %}
+            {% if articles.number == num %}
+                <span class="px-3 py-2 rounded-lg bg-indigo-600 text-white">{{ num }}</span>
+            {% elif num > articles.number|add:'-3' and num < articles.number|add:'3' %}
+                <a href="?page={{ num }}" 
+                   class="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50">
+                    {{ num }}
+                </a>
+            {% endif %}
+        {% endfor %}
+
+        {% if articles.has_next %}
+        <a href="?page={{ articles.next_page_number }}"
+           class="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50">
+            Next
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Debounced search
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Update filters
+    const updateFilters = debounce(() => {
+        const url = new URL(window.location.href);
+        const search = document.getElementById('searchInput').value.trim();
+        const category = document.getElementById('categoryFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        
+        if (search) url.searchParams.set('search', search);
+        else url.searchParams.delete('search');
+        
+        if (category) url.searchParams.set('category', category);
+        else url.searchParams.delete('category');
+        
+        if (status) url.searchParams.set('status', status);
+        else url.searchParams.delete('status');
+        
+        url.searchParams.delete('page');
+        window.location.href = url.toString();
+    }, 500);
+
+    // Bind events
+    document.getElementById('searchInput').addEventListener('input', updateFilters);
+    document.getElementById('categoryFilter').addEventListener('change', updateFilters);
+    document.getElementById('statusFilter').addEventListener('change', updateFilters);
+
+    // Toggle all checkboxes
+    function toggleAllCheckboxes(source) {
+        document.querySelectorAll('.article-checkbox').forEach(checkbox => {
+            checkbox.checked = source.checked;
+        });
+        toggleBulkActions();
+    }
+
+    // Show/hide bulk actions
+    function toggleBulkActions() {
+        const checkedBoxes = document.querySelectorAll('.article-checkbox:checked');
+        const bulkActions = document.getElementById('bulkActions');
+        
+        if (checkedBoxes.length > 0) {
+            bulkActions.classList.add('show');
+        } else {
+            bulkActions.classList.remove('show');
+        }
+    }
+
+    // Bulk actions
+    function getSelectedIds() {
+        return Array.from(document.querySelectorAll('.article-checkbox:checked'))
+                   .map(cb => cb.value);
+    }
+
+    function confirmBulkDelete() {
+        const ids = getSelectedIds();
+        if (confirm(`Are you sure you want to delete ${ids.length} articles?`)) {
+            // Implement bulk delete
+        }
+    }
+
+    function publishSelected() {
+        const ids = getSelectedIds();
+        // Implement bulk publish
+    }
+
+    // Single article actions
+    async function toggleFeatured(articleId, currentValue) {
+        try {
+            const response = await fetch(`/dashboard/content/${articleId}/quick-update/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `field=is_featured&value=${!currentValue}`
+            });
+            
+            if (response.ok) {
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+
+    function deleteArticle(articleId, title) {
+        if (confirm(`Are you sure you want to delete "${title}"?`)) {
+            fetch(`/dashboard/content/${articleId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                }
+            });
+        }
+    }
+</script>
+{% endblock %} 

@@ -1,0 +1,112 @@
+{% extends "admin/base_admin.html" %}
+{% load static %}
+
+{% block title %}User Profile - Matana CMS{% endblock %}
+{% block page_title %}User Profile{% endblock %}
+{% block page_subtitle %}Manage your account settings{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Profile Form -->
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="p-6 sm:p-8">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- Personal Information -->
+                <div class="space-y-4">
+                    <h3 class="text-lg font-medium text-gray-900">Personal Information</h3>
+                    
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <!-- First Name -->
+                        <div>
+                            <label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
+                            <input type="text" 
+                                   name="first_name" 
+                                   id="first_name"
+                                   value="{{ request.user.first_name }}"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        
+                        <!-- Last Name -->
+                        <div>
+                            <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
+                            <input type="text" 
+                                   name="last_name" 
+                                   id="last_name"
+                                   value="{{ request.user.last_name }}"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    
+                    <!-- Email -->
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" 
+                               name="email" 
+                               id="email"
+                               value="{{ request.user.email }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <!-- Role Information -->
+                <div class="space-y-4">
+                    <h3 class="text-lg font-medium text-gray-900">Role & Permissions</h3>
+                    
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">
+                                    {% if request.user.is_superuser %}
+                                        Super Administrator
+                                    {% elif request.user.groups.all|length > 0 %}
+                                        {{ request.user.groups.all|join:", " }}
+                                    {% else %}
+                                        Staff
+                                    {% endif %}
+                                </p>
+                                <p class="text-sm text-gray-500">Your role and access level</p>
+                            </div>
+                            {% if request.user.is_superuser %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                Full Access
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="flex justify-end">
+                    <button type="submit" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        Update Profile
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Additional Settings -->
+    <div class="mt-6 bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="p-6 sm:p-8">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Security Settings</h3>
+            
+            <div class="space-y-4">
+                <!-- Change Password -->
+                <div class="flex items-center justify-between py-4 border-t">
+                    <div>
+                        <p class="text-sm font-medium text-gray-700">Change Password</p>
+                        <p class="text-sm text-gray-500">Update your password regularly to keep your account secure</p>
+                    </div>
+                    <a href="{% url 'admin:password_change' %}" 
+                       class="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">
+                        Change Password
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

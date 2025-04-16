@@ -1,0 +1,387 @@
+{% extends "admin/base_admin.html" %}
+{% load static %}
+
+{% block title %}{{ title }} - Matana CMS{% endblock %}
+
+{% block content %}
+<div id="pageApp" class="max-w-5xl mx-auto">
+    <form @submit.prevent="savePage" class="space-y-8" id="pageForm">
+        {% csrf_token %}
+        
+        <!-- Page Info -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h3 class="text-lg font-semibold mb-4">Page Information</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                    <input type="text" v-model="pageData.title" required
+                           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Meta Description</label>
+                    <textarea v-model="pageData.metadata.meta_description" rows="2" 
+                              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Meta Keywords</label>
+                    <input type="text" v-model="pageData.metadata.meta_keywords"
+                           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Blocks -->
+        <div class="space-y-8">
+            <div v-for="(content, identifier) in blocks" :key="identifier" class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div class="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
+                    <!-- <h3 class="text-lg font-semibold text-gray-900">[[content.title|capitalize ]]</h3> -->
+                    <h3 class="text-lg font-semibold text-gray-900">[[ identifier|capitalize ]]</h3>
+                    <button type="button" @click="toggleBlock(identifier)"
+                            class="text-gray-500 hover:text-gray-700">
+                        <i :class="['fas', blockStates[identifier] ? 'fa-chevron-down' : 'fa-chevron-right']"></i>
+                    </button>
+                </div>
+                
+                <div :id="'block-' + identifier" v-show="blockStates[identifier]" class="p-6 space-y-6">
+                    <!-- Title & Subtitle -->
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                            <input type="text" v-model="content.title"
+                                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Subtitle</label>
+                            <input type="text" v-model="content.subtitle"
+                                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea v-model="content.description" rows="3"
+                                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+
+                    <!-- Images -->
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Image</label>
+                            <div class="flex gap-2">
+                                <input type="text" v-model="content.image"
+                                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <button type="button" @click="openMediaLibrary(identifier, 'image')"
+                                        class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                                    <i class="fas fa-image"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Background Image</label>
+                            <div class="flex gap-2">
+                                <input type="text" v-model="content.background_image"
+                                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <button type="button" @click="openMediaLibrary(identifier, 'background_image')"
+                                        class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                                    <i class="fas fa-image"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items -->
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <label class="block text-sm font-medium text-gray-700">Items</label>
+                            <!-- Add Button for Items -->
+                            <button type="button" @click="addItem(identifier)" 
+                                    class="text-sm bg-blue-50 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-100">
+                                <i class="fas fa-plus mr-1"></i> Add Item
+                            </button>
+                        </div>
+                        <div class="space-y-4">
+                            <div v-for="(item, index) in content.items" :key="index"
+                                 class="bg-gray-50 p-4 rounded-lg relative group">
+                                
+                                <!-- Item Control Buttons -->
+                                <div class="absolute top-2 right-2 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <!-- Duplicate Button -->
+                                    <button type="button" @click="duplicateItem(identifier, index)" 
+                                            class="p-1 text-blue-500 hover:text-blue-700" 
+                                            title="Duplicate Item">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                    <!-- Remove Button -->
+                                    <button type="button" @click="removeItem(identifier, index)" 
+                                            class="p-1 text-red-500 hover:text-red-700" 
+                                            title="Remove Item">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Dynamic Fields Based on Item Structure -->
+                                <div class="grid gap-4">
+                                    <!-- Iterate through item properties -->
+                                    <template v-for="(value, key) in item">
+                                        <div v-if="key !== 'items'" class="w-full" :key="key">
+                                            <!-- Image Field -->
+                                            <template v-if="key === 'image'">
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">[[ key ]]</label>
+                                                <div class="flex gap-2">
+                                                    <input type="text" v-model="item[key]"
+                                           class="w-full px-4 py-2 border rounded-lg">
+                                                    <button type="button" @click="openMediaLibrary(identifier, key, index)"
+                                                            class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                                                        <i class="fas fa-image"></i>
+                                        </button>
+                                    </div>
+                                                <!-- Preview if image exists -->
+                                                <div v-if="item[key]" class="mt-2">
+                                                    <img :src="item[key]" class="h-20 w-auto rounded-lg">
+                                                </div>
+                                            </template>
+                                            
+                                            <!-- Regular Text Field -->
+                                            <template v-else>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">[[ key ]]</label>
+                                                <textarea v-model="item[key]" rows="3"
+                                                          class="w-full px-4 py-2 border rounded-lg"></textarea>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Call to Action -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-medium text-gray-900 mb-3">Call to Action</h4>
+                        <div class="grid md:grid-cols-3 gap-4">
+                            <input type="text" v-model="content.cta.text" placeholder="Button Text"
+                                   class="w-full px-4 py-2 border rounded-lg">
+                            <input type="text" v-model="content.cta.url" placeholder="URL"
+                                   class="w-full px-4 py-2 border rounded-lg">
+                            <select v-model="content.cta.style"
+                                    class="w-full px-4 py-2 border rounded-lg">
+                                <option value="primary">Primary</option>
+                                <option value="secondary">Secondary</option>
+                                <option value="outline">Outline</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-end gap-4">
+            <button type="button" @click="cancel" 
+                    class="px-6 py-2 border rounded-lg hover:bg-gray-50">
+                Cancel
+            </button>
+            <button type="submit" :disabled="saving"
+                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                [[ saving ? 'Saving...' : 'Save Changes' ]]
+            </button>
+        </div>
+    </form>
+
+    <!-- Error Alert -->
+    <div v-if="error" class="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg">
+        [[ error ]]
+    </div>
+
+    <!-- Success Alert -->
+    <div v-if="successMessage" class="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg">
+        [[ successMessage ]]
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+new Vue({
+    delimiters: ['[[', ']]'],
+    el: '#pageApp',
+    data: {
+        pageData: {
+            title: '{{ page.title|escapejs }}',
+            metadata: {
+                meta_description: '{{ page.metadata.meta_description|default:""|escapejs }}',
+                meta_keywords: '{{ page.metadata.meta_keywords|default:""|escapejs }}'
+            }
+        },
+        blocks: JSON.parse('{{ blocks|escapejs|safe }}'),
+        blockStates: {},
+        saving: false,
+        error: null,
+        successMessage: null
+    },
+    created() {
+        // Initialize block states
+        Object.keys(this.blocks).forEach(identifier => {
+            this.$set(this.blockStates, identifier, true);
+        });
+    },
+    methods: {
+        toggleBlock(identifier) {
+            this.$set(this.blockStates, identifier, !this.blockStates[identifier]);
+        },
+        
+        addItem(identifier) {
+            if (!this.blocks[identifier].items) {
+                this.$set(this.blocks[identifier], 'items', []);
+            }
+            this.blocks[identifier].items.push({
+                title: '',
+                image: '',
+                description: ''
+            });
+        },
+        
+        removeItem(identifier, index) {
+            this.blocks[identifier].items.splice(index, 1);
+        },
+        
+        // New method to duplicate an item
+        duplicateItem(identifier, index) {
+            if (!this.blocks[identifier].items) {
+                return;
+            }
+            
+            try {
+                // Create a deep copy of the item
+                const originalItem = this.blocks[identifier].items[index];
+                const newItem = JSON.parse(JSON.stringify(originalItem));
+                
+                // Insert the copy after the original
+                this.blocks[identifier].items.splice(index + 1, 0, newItem);
+                
+                // Show success notification
+                this.showNotification('Item duplicated successfully', 'success');
+            } catch (error) {
+                console.error('Error duplicating item:', error);
+                this.error = 'Failed to duplicate item';
+            }
+        },
+        
+        addNestedItem(identifier, itemIndex) {
+            if (!this.blocks[identifier].items[itemIndex].items) {
+                this.$set(this.blocks[identifier].items[itemIndex], 'items', []);
+            }
+            this.blocks[identifier].items[itemIndex].items.push('');
+        },
+        
+        removeNestedItem(identifier, itemIndex, nestedIndex) {
+            this.blocks[identifier].items[itemIndex].items.splice(nestedIndex, 1);
+        },
+        
+        openMediaLibrary(identifier, field, itemIndex = null) {
+            console.log('Opening media library:', { identifier, field, itemIndex });
+            
+            // Create callback function before opening window
+            window.handleMediaSelect = (mediaData) => {
+                console.log('Media selected:', mediaData);
+                
+                try {
+                    if (itemIndex !== null) {
+                        // Updating item in array
+                        console.log('Updating item:', itemIndex, 'in', identifier);
+                        if (!this.blocks[identifier].items) {
+                            this.$set(this.blocks[identifier], 'items', []);
+                        }
+                        this.$set(this.blocks[identifier].items[itemIndex], field, mediaData.url);
+                    } else {
+                        // Updating block directly
+                        console.log('Updating block:', identifier);
+                        this.$set(this.blocks[identifier], field, mediaData.url);
+                    }
+                    
+                    // Show success notification
+                    this.showNotification('Image updated successfully', 'success');
+                } catch (error) {
+                    console.error('Error updating image:', error);
+                    this.error = 'Failed to update image';
+                }
+            };
+
+            // Open media library window
+            const w = 800;
+            const h = 600;
+            const left = (screen.width/2)-(w/2);
+            const top = (screen.height/2)-(h/2);
+            
+            const libraryWindow = window.open(
+                `/lib/library/?mode=select`, 
+                'MediaLibrary',
+                `width=${w},height=${h},top=${top},left=${left},scrollbars=yes`
+            );
+
+            // Add error handling for popup blocker
+            if (!libraryWindow || libraryWindow.closed || typeof libraryWindow.closed === 'undefined') {
+                this.error = 'Please allow popups for the media library';
+            }
+        },
+        
+        showNotification(message, type = 'success') {
+            const notification = type === 'success' ? 'successMessage' : 'error';
+            this[notification] = message;
+            setTimeout(() => {
+                this[notification] = null;
+            }, 3000);
+        },
+        
+        async savePage() {
+            this.saving = true;
+            this.error = null;
+            this.successMessage = null;
+            
+            try {
+                const formData = new FormData();
+                formData.append('blocks', JSON.stringify(this.blocks));
+                formData.append('title', this.pageData.title);
+                formData.append('metadata', JSON.stringify(this.pageData.metadata));
+                
+                const response = await axios.post(window.location.href, formData, {
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (response.data.success) {
+                    this.successMessage = 'Page saved successfully!';
+                    setTimeout(() => {
+                        window.location.href = response.data.redirect_url;
+                    }, 1000);
+                } else {
+                    throw new Error(response.data.error || 'Save failed');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                this.error = error.response?.data?.error || error.message || 'An error occurred while saving';
+                setTimeout(() => {
+                    this.error = null;
+                }, 5000);
+            } finally {
+                this.saving = false;
+            }
+        },
+        
+        cancel() {
+            history.back();
+        }
+    },
+    watch: {
+        blocks: {
+            handler(newVal) {
+                console.log('Blocks updated:', newVal);
+            },
+            deep: true
+        }
+    }
+});
+</script>
+{% endblock %} 
