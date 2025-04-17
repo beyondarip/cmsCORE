@@ -23,6 +23,7 @@ from django.views.static import serve
 
 
 from django.shortcuts import render
+from .views import page_not_found
 
 def test_404(request):
     """View untuk testing halaman 404"""
@@ -31,8 +32,10 @@ def test_404(request):
 urlpatterns = [
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
+    path('404/', page_not_found, name='404'),
+    path('', page_not_found, name='home'),
     path(settings.SECRET_KEY_LOGIN+"_"+'admin/', admin.site.urls),
-    path('qnWmCHVq7x7keXdxjyp4OkecPCxgda42FH0V5PGs7Hon1YTO/', include('apps.members.urls', namespace='members')),
+    path('da42FH0V5PGs7Hon1YTO/', include('apps.members.urls', namespace='members')),
     path('django_f', TemplateView.as_view(template_name='index.html'), name='django_f'),
     
 ]
@@ -44,11 +47,7 @@ urlpatterns = [
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
+# Set up custom error handlers
+handler404 = 'config.views.page_not_found'
 
-#  Add this after urlpatterns
-if settings.DEBUG:
-    urlpatterns += [
-        path('404/', lambda request: views.custom_404(request, None)),
-    ]
 
-handler404 = 'apps.pages.views.custom_404'

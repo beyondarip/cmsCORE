@@ -1,199 +1,142 @@
-{% extends "base.html" %}
-{% load image_optimizer %}
-{% load static %}
-
-{% block title %}Halaman Tidak Ditemukan - Matana University{% endblock %}
-
-{% block extra_css %}
-<style>
-    /* Custom 404 Styles */
-    .error-page {
-        min-height: calc(100vh - 80px); /* Account for navbar */
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        position: relative;
-        overflow: hidden;
-    }
-
-    /* Animated Background Pattern */
-    .error-pattern {
-        position: absolute;
-        inset: 0;
-        opacity: 0.4;
-        background-image: 
-            radial-gradient(circle at 25px 25px, var(--primary-light) 2%, transparent 0%),
-            radial-gradient(circle at 75px 75px, var(--secondary-light) 2%, transparent 0%);
-        background-size: 100px 100px;
-        animation: patternFloat 20s linear infinite;
-    }
-
-    /* Floating Animation for 404 Text */
-    .floating {
-        animation: float 6s ease-in-out infinite;
-    }
-
-    .error-number {
-        font-size: 12rem;
-        font-weight: 900;
-        line-height: 1;
-        background: linear-gradient(135deg, var(--primary-dark), var(--primary-main));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-shadow: 3px 3px 6px rgba(27, 49, 104, 0.1);
-    }
-
-    /* Blob Animation */
-    .blob {
-        position: absolute;
-        width: 500px;
-        height: 500px;
-        border-radius: 50%;
-        filter: blur(80px);
-        opacity: 0.15;
-        pointer-events: none;
-    }
-
-    .blob-1 {
-        background: var(--primary-light);
-        top: -20%;
-        right: -10%;
-        animation: blobMove1 15s ease-in-out infinite;
-    }
-
-    .blob-2 {
-        background: var(--secondary-main);
-        bottom: -20%;
-        left: -10%;
-        animation: blobMove2 18s ease-in-out infinite;
-    }
-
-    /* Search Box */
-    .search-box {
-        background: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(27, 49, 104, 0.1);
-        transition: all 0.3s ease;
-    }
-
-    .search-box:focus-within {
-        background: white;
-        border-color: var(--primary-main);
-        box-shadow: 0 4px 20px -4px rgba(27, 49, 104, 0.15);
-    }
-
-    /* Quick Links */
-    .quick-link {
-        transition: all 0.3s ease;
-    }
-
-    .quick-link:hover {
-        background: white;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 20px -4px rgba(27, 49, 104, 0.15);
-    }
-
-    .quick-link:hover .icon-box {
-        background: var(--primary-main);
-        color: white;
-    }
-
-    .icon-box {
-        transition: all 0.3s ease;
-    }
-
-    /* Animations */
-    @keyframes float {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-20px); }
-    }
-
-    @keyframes patternFloat {
-        0% { background-position: 0 0; }
-        100% { background-position: 100px 100px; }
-    }
-
-    @keyframes blobMove1 {
-        0%, 100% { transform: translate(0, 0) scale(1); }
-        50% { transform: translate(-30px, 30px) scale(1.1); }
-    }
-
-    @keyframes blobMove2 {
-        0%, 100% { transform: translate(0, 0) scale(1); }
-        50% { transform: translate(30px, -30px) scale(1.1); }
-    }
-</style>
-{% endblock %}
-
-{% block content %}
-<div class="error-page">
-    <!-- Background Elements -->
-    <div class="error-pattern"></div>
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
-
-    <!-- Content -->
-    <div class="container mx-auto px-4 py-20">
-        <div class="max-w-4xl mx-auto text-center">
-            <!-- 404 Number -->
-            <div class="error-number floating mb-8">404</div>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Halaman Tidak Ditemukan | Matana University</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header {
+            padding: 20px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .logo {
+            max-width: 150px;
+            margin-bottom: 15px;
+        }
+        
+        .error-code {
+            font-size: 180px;
+            font-weight: bold;
+            color: rgba(0, 0, 0, 0.1);
+            margin: 30px 0;
+        }
+        
+        .error-title {
+            font-size: 32px;
+            color: #102048;
+            margin-bottom: 20px;
+        }
+        
+        .error-message {
+            font-size: 16px;
+            color: #6c757d;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+        
+        .search-form {
+            margin: 30px auto;
+            max-width: 500px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 30px;
+            outline: none;
+        }
+        
+        .footer-nav {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #102048;
+        }
+        
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .error-code {
+                font-size: 120px;
+            }
             
-            <!-- Error Message -->
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-                Oops! Halaman Tidak Ditemukan
-            </h1>
-            <p class="text-xl text-gray-600 mb-12 max-w-2xl mx-auto">
-                Maaf, halaman yang Anda cari tidak dapat ditemukan. 
-                Silakan gunakan pencarian atau kunjungi halaman populer di bawah ini.
-            </p>
-
-            <!-- Search Box -->
-            <form class="max-w-2xl mx-auto mb-16">
-                <div class="search-box flex items-center p-2 rounded-xl">
-                    <input type="text" 
-                           placeholder="Cari halaman..." 
-                           class="flex-1 px-4 py-3 bg-transparent border-none focus:outline-none text-gray-700 placeholder-gray-500">
-                    <button type="submit" 
-                            class="px-6 py-3 bg-primary-main text-white rounded-lg hover:bg-primary-dark transition-colors">
-                        Cari
-                    </button>
-                </div>
-            </form>
-
-            <!-- Quick Links -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Home -->
-                <a href="{% url 'home' %}" class="quick-link group block p-6 rounded-xl bg-white/60 backdrop-blur">
-                    <div class="icon-box w-12 h-12 mx-auto mb-4 rounded-lg bg-primary-main/10 text-primary-main flex items-center justify-center">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-                        </svg>
-                    </div>
-                    <h3 class="font-semibold text-gray-900 mb-1">Beranda</h3>
-                    <p class="text-sm text-gray-600">Kembali ke halaman utama</p>
-                </a>
-
-                <!-- Registration -->
-                <a href="https://matanauniversity.siakadcloud.com/spmbfront/" class="quick-link group block p-6 rounded-xl bg-white/60 backdrop-blur">
-                    <div class="icon-box w-12 h-12 mx-auto mb-4 rounded-lg bg-primary-main/10 text-primary-main flex items-center justify-center">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
-                        </svg>
-                    </div>
-                    <h3 class="font-semibold text-gray-900 mb-1">Pendaftaran</h3>
-                    <p class="text-sm text-gray-600">Daftar sebagai mahasiswa baru</p>
-                </a>
-
-                <!-- Contact -->
-                <a href="https://wa.me/6281287775999?text=Saya+ingin+bertanya+tentang+perkuliahan+di+Matana+University&type=phone_number&app_absent=0" class="quick-link group block p-6 rounded-xl bg-white/60 backdrop-blur">
-                    <div class="icon-box w-12 h-12 mx-auto mb-4 rounded-lg bg-primary-main/10 text-primary-main flex items-center justify-center">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                        </svg>
-                    </div>
-                    <h3 class="font-semibold text-gray-900 mb-1">Hubungi Kami</h3>
-                    <p class="text-sm text-gray-600">Bantuan dan informasi</p>
-                </a>
-            </div>
+            .error-title {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="/static/images/logo.png" alt="Matana University Logo" class="logo">
+        </div>
+        
+        <div class="error-code">404</div>
+        
+        <h1 class="error-title">Oops! Halaman Tidak Ditemukan</h1>
+        
+        <p class="error-message">
+            Maaf, halaman yang Anda cari tidak dapat ditemukan. Silakan gunakan 
+            pencarian atau kunjungi halaman populer di bawah ini.
+        </p>
+        
+        <form class="search-form" action="/search/" method="GET">
+            <input type="text" name="q" class="search-input" placeholder="Cari halaman..." aria-label="Search">
+        </form>
+        
+        <div class="footer-nav">
+            <a href="/" class="nav-item">
+                <div class="nav-icon">🏠</div>
+                <span>Beranda</span>
+            </a>
+            
+            <a href="/pendaftaran" class="nav-item">
+                <div class="nav-icon">📝</div>
+                <span>Pendaftaran</span>
+            </a>
+            
+            <a href="/kontak" class="nav-item">
+                <div class="nav-icon">✉️</div>
+                <span>Kontak</span>
+            </a>
         </div>
     </div>
-</div>
-{% endblock %} 
+</body>
+</html> 

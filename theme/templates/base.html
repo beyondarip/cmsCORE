@@ -1,19 +1,142 @@
-{% load static tailwind_tags %}
 <!DOCTYPE html>
-<html lang="en">
-	<head>
-    <title>Django Tailwind</title>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<meta http-equiv="X-UA-Compatible" content="ie=edge">
-		{% tailwind_css %}
-	</head>
-
-	<body class="bg-gray-50 font-serif leading-normal tracking-normal">
-		<div class="container mx-auto">
-			<section class="flex items-center justify-center h-screen">
-				<h1 class="text-5xl">Django + Tailwind = ❤️</h1>
-			</section>
-		</div>
-	</body>
-</html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Halaman Tidak Ditemukan | Matana University</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header {
+            padding: 20px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .logo {
+            max-width: 150px;
+            margin-bottom: 15px;
+        }
+        
+        .error-code {
+            font-size: 180px;
+            font-weight: bold;
+            color: rgba(0, 0, 0, 0.1);
+            margin: 30px 0;
+        }
+        
+        .error-title {
+            font-size: 32px;
+            color: #102048;
+            margin-bottom: 20px;
+        }
+        
+        .error-message {
+            font-size: 16px;
+            color: #6c757d;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+        
+        .search-form {
+            margin: 30px auto;
+            max-width: 500px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 30px;
+            outline: none;
+        }
+        
+        .footer-nav {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #102048;
+        }
+        
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .error-code {
+                font-size: 120px;
+            }
+            
+            .error-title {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="/static/images/logo.png" alt="Matana University Logo" class="logo">
+        </div>
+        
+        <div class="error-code">404</div>
+        
+        <h1 class="error-title">Oops! Halaman Tidak Ditemukan</h1>
+        
+        <p class="error-message">
+            Maaf, halaman yang Anda cari tidak dapat ditemukan. Silakan gunakan 
+            pencarian atau kunjungi halaman populer di bawah ini.
+        </p>
+        
+        <form class="search-form" action="/search/" method="GET">
+            <input type="text" name="q" class="search-input" placeholder="Cari halaman..." aria-label="Search">
+        </form>
+        
+        <div class="footer-nav">
+            <a href="/" class="nav-item">
+                <div class="nav-icon">🏠</div>
+                <span>Beranda</span>
+            </a>
+            
+            <a href="/pendaftaran" class="nav-item">
+                <div class="nav-icon">📝</div>
+                <span>Pendaftaran</span>
+            </a>
+            
+            <a href="/kontak" class="nav-item">
+                <div class="nav-icon">✉️</div>
+                <span>Kontak</span>
+            </a>
+        </div>
+    </div>
+</body>
+</html> 

@@ -572,7 +572,6 @@ class SearchView(APIView):
         serializer = ElementSerializer(elements, many=True)
         return Response(serializer.data)
     
-
 # Add to views.py inside NoteViewSet
 from .models import NoteImage
 
@@ -617,3 +616,4 @@ def images(self, request, pk=None):
     serializer = NoteImageSerializer(images, many=True)
     
     return Response(serializer.data)
+

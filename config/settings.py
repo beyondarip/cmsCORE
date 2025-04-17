@@ -74,8 +74,6 @@ INSTALLED_APPS = [
     'corsheaders',
     
     # Local apps
-    'apps.pages.apps.PagesConfig',
-    'apps.media.apps.MediaConfig',
     'apps.members.apps.MembersConfig',  # Make sure this matches exactly
     
     'axes',
@@ -108,6 +106,9 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+#     'DEFAULT_RENDERER_CLASSES': (
+#     'rest_framework.renderers.JSONRenderer',
+# )
 }
 # CORS settings (for development)
 CORS_ALLOW_ALL_ORIGINS = True  # Only in developmen
@@ -140,7 +141,6 @@ MIDDLEWARE = [
     # Tambahkan middleware keamanan tambahan
     'django.middleware.security.SecurityMiddleware',
     'csp.middleware.CSPMiddleware',  # Content Security Policy
-    'apps.pages.middleware.maintenance.MaintenanceModeMiddleware',
 
     'axes.middleware.AxesMiddleware',
     # 'django.contrib.admin.middleware.LogEntryMiddleware',
@@ -207,7 +207,6 @@ SECURE_DOWNLOAD_ROOT = os.path.join(BASE_DIR, 'secure_downloads')
 
 AXES_FAILURE_LIMIT = 3
 AXES_COOLOFF_TIME = 300
-AXES_LOCKOUT_TEMPLATE = 'pages/lockout.html'
 AXES_LOCK_OUT_AT_FAILURE = True  # Lock out after failure limit is reached
 AXES_RESET_ON_SUCCESS = True 
 
