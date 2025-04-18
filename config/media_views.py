@@ -13,18 +13,31 @@ from django.shortcuts import get_object_or_404, render
 from django.views.decorators.csrf import csrf_exempt
 import datetime
 
+# Import Python's magic module if available
+try:
+    import magic
+    MAGIC_AVAILABLE = True
+except ImportError:
+    MAGIC_AVAILABLE = False
+
+
+from django.http import FileResponse, HttpResponseForbidden, JsonResponse, HttpResponse
+from django.conf import settings
+import os
+import mimetypes
+import re
 
 def protected_serve(request, path):
     """
     View untuk melayani file media dengan proteksi login.
-    Hanya user yang sudah login yang bisa mengakses file media.
+    Mendukung HTTP Range Requests untuk streaming video dengan posisi yang bisa diatur.
     
     Args:
         request: HTTP request
         path: Path file di dalam MEDIA_ROOT
     
     Returns:
-        FileResponse jika user sudah login
+        FileResponse jika user sudah login, dengan dukungan range requests
         HttpResponseForbidden jika user belum login
     """
     # Cek apakah user sudah login
@@ -53,14 +66,54 @@ def protected_serve(request, path):
         # Kembalikan halaman 404
         return render(request, '404.html', status=404)
     
-    # Kembalikan file
+    # Dapatkan ukuran file
+    file_size = os.path.getsize(file_path)
+    
+    # Tentukan content type
     content_type, encoding = mimetypes.guess_type(file_path)
+    
+    # If content_type is not determined by extension, try using magic module
+    if not content_type and MAGIC_AVAILABLE:
+        try:
+            mime = magic.Magic(mime=True)
+            content_type = mime.from_file(file_path)
+        except Exception:
+            pass
+            
     content_type = content_type or 'application/octet-stream'
     
-    response = FileResponse(open(file_path, 'rb'), content_type=content_type)
+    # Cek apakah ada header Range untuk permintaan sebagian file
+    range_header = request.META.get('HTTP_RANGE', '').strip()
+    range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
+    
+    if range_match:
+        # Ini adalah permintaan range (partial content)
+        start = int(range_match.group(1))
+        end = int(range_match.group(2)) if range_match.group(2) else file_size - 1
+        
+        # Pastikan end tidak melebihi ukuran file
+        end = min(end, file_size - 1)
+        
+        # Ukuran konten yang akan dikirim
+        content_length = end - start + 1
+        
+        # Buka file dan posisikan ke start byte
+        file_obj = open(file_path, 'rb')
+        file_obj.seek(start)
+        
+        # Buat response
+        response = FileResponse(file_obj, content_type=content_type, status=206)
+        response['Content-Length'] = str(content_length)
+        response['Content-Range'] = f'bytes {start}-{end}/{file_size}'
+        response['Accept-Ranges'] = 'bytes'
+    else:
+        # Ini permintaan konten lengkap
+        response = FileResponse(open(file_path, 'rb'), content_type=content_type)
+        response['Content-Length'] = str(file_size)
+        response['Accept-Ranges'] = 'bytes'
+    
     response['Content-Disposition'] = f'inline; filename="{os.path.basename(file_path)}"'
     return response
-
 
 class FileUploadView(APIView):
     """
@@ -139,6 +192,16 @@ class FileListView(APIView):
                 
                 # Determine file type
                 content_type, _ = mimetypes.guess_type(file_path)
+                
+                # If content_type is not determined by extension, try using magic module
+                if not content_type and MAGIC_AVAILABLE:
+                    try:
+                        mime = magic.Magic(mime=True)
+                        content_type = mime.from_file(file_path)
+                        # print(file_path, "content_type :",content_type)
+                    except Exception:
+                        pass
+                
                 content_type = content_type or 'application/octet-stream'
                 
                 # Extract file type category from content_type
@@ -165,6 +228,7 @@ class FileListView(APIView):
                     'url': file_url,
                     'size': self._format_file_size(size_bytes),
                     'type': file_type,
+                    'content_type': content_type,  # Include actual content type for debugging
                     'modified': modified_date
                 })
         

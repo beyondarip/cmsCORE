@@ -112,6 +112,32 @@ REST_FRAMEWORK = {
 }
 # CORS settings (for development)
 CORS_ALLOW_ALL_ORIGINS = True  # Only in developmen
+# Add this to your settings.py
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:5173',  # Your Vue dev server
+    # Add any other origins as needed
+]
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # REST_AUTH = {
 #     'USE_JWT': True,
@@ -217,6 +243,9 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 # X_FRAME_OPTIONS = 'DENY'
 X_FRAME_OPTIONS = 'SAMEORIGIN' # tujuan untuk mengizinkan iframe dari halaman yang sama
+
+# SESSION_COOKIE_HTTPONLY = True
+# SESSION_COOKIE_SAMESITE = 'Lax' 
 
 if not IS_PRODUCTION:
     # Disable all security redirects and related features
