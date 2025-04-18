@@ -20,7 +20,7 @@ import unicodedata
 import uuid
 
 # Configuration from settings instead of hardcoding
-REMOVE_FILE_EXTENSIONS = getattr(settings, 'REMOVE_FILE_EXTENSIONS', False)
+REMOVE_FILE_EXTENSIONS = getattr(settings, 'REMOVE_FILE_EXTENSIONS', True)
 
 # Import Python's magic module if available
 try:
