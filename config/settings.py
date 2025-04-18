@@ -95,7 +95,7 @@ SWAGGER_SETTINGS['VALIDATOR_URL'] = '127.0.0.1:8080'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+        # 'rest_framework.authentication.SessionAuthentication',
     ],
      "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.coreapi.AutoSchema",
     'DEFAULT_FILTER_BACKENDS': [
@@ -222,7 +222,9 @@ if DEBUG:
 
 # Media files configuration
 
-MEDIA_URL = f'/server/qnWmCHVq7x7keXdxjyp4OkecPCxgda42FH0V5PGs7Hon1YTO/2/fjowejao/'
+
+
+MEDIA_URL = f'/fjowejao/'
 MEDIA_ROOT = BASE_DIR / 'fjowejao'  # This will now be a Path object
 print("MEDIA_ROOT = ", MEDIA_ROOT)
 

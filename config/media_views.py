@@ -25,93 +25,102 @@ try:
 except ImportError:
     MAGIC_AVAILABLE = False
 
+class ProtectedMediaView(APIView):
+    """
+    Class-based API view for serving protected media files.
+    Supports both session and token authentication.
+    Handles HTTP Range Requests for streaming video with adjustable position.
+    
+    This replaces the previous function-based view to provide more consistent
+    authentication support, especially for API clients.
+    """
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [SessionAuthentication, TokenAuthentication]
+    
+    def get(self, request, path, format=None):
+        """
+        Serves the requested media file with authentication checks.
+        Supports HTTP Range Requests for streaming.
+        
+        Args:
+            request: HTTP request
+            path: Path to the file in MEDIA_ROOT
+            
+        Returns:
+            FileResponse if authenticated, with range request support
+            Response with error details if not authenticated or file not found
+        """
+        # Path file lengkap
+        file_path = os.path.join(settings.MEDIA_ROOT, path)
+        
+        # Cek apakah file ada
+        if not os.path.exists(file_path) or not os.path.isfile(file_path):
+            if 'application/json' in request.META.get('HTTP_ACCEPT', ''):
+                return Response({
+                    'error': 'Not Found', 
+                    'message': 'File tidak ditemukan.'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Kembalikan halaman 404
+            return render(request, '404.html', status=404)
+        
+        # Dapatkan ukuran file
+        file_size = os.path.getsize(file_path)
+        
+        # Tentukan content type
+        content_type, encoding = mimetypes.guess_type(file_path)
+        
+        # If content_type is not determined by extension, try using magic module
+        if not content_type and MAGIC_AVAILABLE:
+            try:
+                mime = magic.Magic(mime=True)
+                content_type = mime.from_file(file_path)
+            except Exception:
+                pass
+                
+        content_type = content_type or 'application/octet-stream'
+        
+        # Cek apakah ada header Range untuk permintaan sebagian file
+        range_header = request.META.get('HTTP_RANGE', '').strip()
+        range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
+        
+        if range_match:
+            # Ini adalah permintaan range (partial content)
+            start = int(range_match.group(1))
+            end = int(range_match.group(2)) if range_match.group(2) else file_size - 1
+            
+            # Pastikan end tidak melebihi ukuran file
+            end = min(end, file_size - 1)
+            
+            # Ukuran konten yang akan dikirim
+            content_length = end - start + 1
+            
+            # Buka file dan posisikan ke start byte
+            file_obj = open(file_path, 'rb')
+            file_obj.seek(start)
+            
+            # Buat response
+            response = FileResponse(file_obj, content_type=content_type, status=206)
+            response['Content-Length'] = str(content_length)
+            response['Content-Range'] = f'bytes {start}-{end}/{file_size}'
+            response['Accept-Ranges'] = 'bytes'
+        else:
+            # Ini permintaan konten lengkap
+            response = FileResponse(open(file_path, 'rb'), content_type=content_type)
+            response['Content-Length'] = str(file_size)
+            response['Accept-Ranges'] = 'bytes'
+        
+        response['Content-Disposition'] = f'inline; filename="{os.path.basename(file_path)}"'
+        return response
+
+# Legacy function for backward compatibility - redirects to the class-based view
 def protected_serve(request, path):
     """
-    View untuk melayani file media dengan proteksi login.
-    Mendukung HTTP Range Requests untuk streaming video dengan posisi yang bisa diatur.
-    
-    Args:
-        request: HTTP request
-        path: Path file di dalam MEDIA_ROOT
-    
-    Returns:
-        FileResponse jika user sudah login, dengan dukungan range requests
-        HttpResponseForbidden jika user belum login
+    Legacy function that delegates to ProtectedMediaView class.
+    Kept for backward compatibility.
     """
-    # Cek apakah user sudah login
-    if not request.user.is_authenticated:
-        # Jika request minta JSON (API), kembalikan JSON
-        if 'application/json' in request.META.get('HTTP_ACCEPT', ''):
-            return JsonResponse({
-                'error': 'Unauthorized', 
-                'message': 'Anda harus login untuk mengakses file ini.'
-            }, status=403)
-        
-        # Jika bukan JSON, kembalikan halaman 404
-        return render(request, '404.html', status=404)
-    
-    # Path file lengkap
-    file_path = os.path.join(settings.MEDIA_ROOT, path)
-    
-    # Cek apakah file ada
-    if not os.path.exists(file_path) or not os.path.isfile(file_path):
-        if 'application/json' in request.META.get('HTTP_ACCEPT', ''):
-            return JsonResponse({
-                'error': 'Not Found', 
-                'message': 'File tidak ditemukan.'
-            }, status=404)
-        
-        # Kembalikan halaman 404
-        return render(request, '404.html', status=404)
-    
-    # Dapatkan ukuran file
-    file_size = os.path.getsize(file_path)
-    
-    # Tentukan content type
-    content_type, encoding = mimetypes.guess_type(file_path)
-    
-    # If content_type is not determined by extension, try using magic module
-    if not content_type and MAGIC_AVAILABLE:
-        try:
-            mime = magic.Magic(mime=True)
-            content_type = mime.from_file(file_path)
-        except Exception:
-            pass
-            
-    content_type = content_type or 'application/octet-stream'
-    
-    # Cek apakah ada header Range untuk permintaan sebagian file
-    range_header = request.META.get('HTTP_RANGE', '').strip()
-    range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
-    
-    if range_match:
-        # Ini adalah permintaan range (partial content)
-        start = int(range_match.group(1))
-        end = int(range_match.group(2)) if range_match.group(2) else file_size - 1
-        
-        # Pastikan end tidak melebihi ukuran file
-        end = min(end, file_size - 1)
-        
-        # Ukuran konten yang akan dikirim
-        content_length = end - start + 1
-        
-        # Buka file dan posisikan ke start byte
-        file_obj = open(file_path, 'rb')
-        file_obj.seek(start)
-        
-        # Buat response
-        response = FileResponse(file_obj, content_type=content_type, status=206)
-        response['Content-Length'] = str(content_length)
-        response['Content-Range'] = f'bytes {start}-{end}/{file_size}'
-        response['Accept-Ranges'] = 'bytes'
-    else:
-        # Ini permintaan konten lengkap
-        response = FileResponse(open(file_path, 'rb'), content_type=content_type)
-        response['Content-Length'] = str(file_size)
-        response['Accept-Ranges'] = 'bytes'
-    
-    response['Content-Disposition'] = f'inline; filename="{os.path.basename(file_path)}"'
-    return response
+    view = ProtectedMediaView.as_view()
+    return view(request, path=path)
 
 @method_decorator(csrf_exempt, name='dispatch')
 class FileDeleteView(APIView):
