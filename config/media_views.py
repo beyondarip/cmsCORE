@@ -328,28 +328,31 @@ class FileUploadView(APIView):
                 # Split the filename into base and extension
                 base_name, ext = os.path.splitext(sanitized_name)
                 # Use just the base name without extension
-                save_filename = base_name
+                unique_filename = base_name
                 # Keep original extension for content type detection
                 content_type, _ = mimetypes.guess_type(original_filename)
             else:
-                # Use the sanitized filename with extension
-                save_filename = sanitized_name
+                # Use the sanitized filename directly
+                unique_filename = sanitized_name
                 content_type = file_obj.content_type or None
             
-            # Create a unique filename using timestamp and random component
-            timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-            unique_id = str(uuid.uuid4())[:8]  # Use part of a UUID for uniqueness
-            unique_filename = f"{save_filename}_{timestamp}_{unique_id}"
+            # Handle filename conflicts by adding a number suffix if file already exists
+            file_path = os.path.join(settings.MEDIA_ROOT, unique_filename)
+            counter = 1
             
+            # If file already exists, add a numeric suffix to avoid overwriting
+            name_base, ext = os.path.splitext(unique_filename)
+            while os.path.exists(file_path):
+                unique_filename = f"{name_base}_{counter}{ext}"
+                file_path = os.path.join(settings.MEDIA_ROOT, unique_filename)
+                counter += 1
+                
             # Ensure the filename doesn't exceed filesystem limits (typically 255 chars)
             if len(unique_filename) > 200:  # Being more conservative
                 unique_filename = unique_filename[:200]
             
             # Log the processed filename
             logger.info(f"Final filename: {unique_filename}")
-            
-            # Path file lengkap - ensure it's properly encoded for filesystem
-            file_path = os.path.join(settings.MEDIA_ROOT, unique_filename)
             
             # Pastikan direktori ada
             os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
