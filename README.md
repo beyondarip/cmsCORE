@@ -88,7 +88,7 @@ The response will be a JSON array of file objects with the following properties:
   {
     "name": "example.jpg",
     "path": "example.jpg",
-    "url": "https://example.com/fjowejao/example.jpg",
+    "url": "https://example.com/media/example.jpg",
     "size": "12.3 KB",
     "type": "image",
     "modified": "2023-06-15"

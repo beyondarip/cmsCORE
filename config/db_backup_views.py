@@ -52,7 +52,8 @@ def backup_database(request):
         logger.info(f"Database backup created at {media_path}")
         
         # URL untuk mengakses file (full URL dengan scheme dan host)
-        file_url = f"{request.scheme}://{request.get_host()}/fjowejao/{filename}"
+        media_url = settings.MEDIA_URL.rstrip('/')
+        file_url = f"{request.scheme}://{request.get_host()}{media_url}/{filename}"
         
         # Kembalikan data sebagai JSON daripada redirect
         return JsonResponse({
@@ -96,7 +97,8 @@ def list_database_backups(request):
         for file_path in backup_files:
             filename = os.path.basename(file_path)
             # URL lengkap dengan scheme dan host
-            file_url = f"{request.scheme}://{request.get_host()}/fjowejao/{filename}"
+            media_url = settings.MEDIA_URL.rstrip('/')
+            file_url = f"{request.scheme}://{request.get_host()}{media_url}/{filename}"
             file_size = os.path.getsize(file_path) / (1024 * 1024)  # Size in MB
             
             backups.append({

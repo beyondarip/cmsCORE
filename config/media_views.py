@@ -291,7 +291,7 @@ class FileListView(APIView):
                 # Get URL using Django's settings
                 media_url = settings.MEDIA_URL.rstrip('/')
                 file_url = f"{request.scheme}://{request.get_host()}{media_url}/{rel_path}"
-                
+                print(file_url)
                 # Add file info to list with more compact representation
                 files.append({
                     'name': filename,

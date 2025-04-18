@@ -31,8 +31,11 @@ def test_404(request):
     """View untuk testing halaman 404"""
     return render(request, '404.html', status=200)
 
+# Get media url pattern without leading/trailing slashes for regex
+media_url_pattern = settings.MEDIA_URL.strip('/')
+
 urlpatterns = [
-    re_path(r'^fjowejao/(?P<path>.*)$', protected_serve, name='protected_media'),
+    re_path(r'^' + media_url_pattern + r'/(?P<path>.*)$', protected_serve, name='protected_media'),
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
     path('404/', page_not_found, name='404'),
     path('', page_not_found, name='home'),
