@@ -619,7 +619,7 @@ SESSION_SAVE_EVERY_REQUEST = True
 
 # Application root path for deployment in subdirectory
 # This is important for properly handling URLs in cPanel deployment
-APPLICATION_ROOT = '/server/qnWmCHVq7x7keXdxjyp4OkecPCxgda42FH0V5PGs7Hon1YTO/2'
+APPLICATION_ROOT = '/server/'
 FORCE_SCRIPT_NAME = APPLICATION_ROOT
 
 # Media Serving Configuration
