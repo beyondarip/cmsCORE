@@ -16,6 +16,8 @@ import datetime
 from django.utils.decorators import method_decorator
 import re
 import logging
+import unicodedata
+import uuid
 
 # Configuration from settings instead of hardcoding
 REMOVE_FILE_EXTENSIONS = getattr(settings, 'REMOVE_FILE_EXTENSIONS', True)
@@ -248,9 +250,30 @@ class FileUploadView(APIView):
             # Get the original file name
             original_filename = file_obj.name
             
-            # Sanitize filename to remove problematic characters
-            sanitized_name = re.sub(r'[^\w\s.-]', '_', original_filename)
-            sanitized_name = re.sub(r'\s+', '_', sanitized_name)
+            # Stronger filename sanitization to remove ALL non-ASCII characters
+            # This is more aggressive but prevents encoding issues
+            
+            # First normalize unicode characters where possible
+            normalized = unicodedata.normalize('NFKD', original_filename)
+            # Strip accents and convert to ASCII, ignoring errors
+            ascii_name = normalized.encode('ascii', 'ignore').decode('ascii')
+            # Replace any remaining problematic characters with underscores
+            sanitized_name = re.sub(r'[^a-zA-Z0-9._-]', '_', ascii_name)
+            
+            # If empty after sanitization (e.g., all characters were non-ASCII)
+            # generate a default name based on content type
+            if not sanitized_name or sanitized_name == '_':
+                content_type = file_obj.content_type or 'application/octet-stream'
+                if content_type.startswith('image/'):
+                    sanitized_name = 'image'
+                elif content_type.startswith('video/'):
+                    sanitized_name = 'video'
+                elif content_type.startswith('audio/'):
+                    sanitized_name = 'audio'
+                else:
+                    sanitized_name = 'file'
+            
+            logger.info(f"Sanitized name: {sanitized_name}")
             
             # If configured to remove extensions, strip the extension
             if REMOVE_FILE_EXTENSIONS:
@@ -265,18 +288,19 @@ class FileUploadView(APIView):
                 save_filename = sanitized_name
                 content_type = file_obj.content_type or None
             
-            # Create a unique filename to avoid conflicts
+            # Create a unique filename using timestamp and random component
             timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-            unique_filename = f"{save_filename}_{timestamp}"
+            unique_id = str(uuid.uuid4())[:8]  # Use part of a UUID for uniqueness
+            unique_filename = f"{save_filename}_{timestamp}_{unique_id}"
             
             # Ensure the filename doesn't exceed filesystem limits (typically 255 chars)
-            if len(unique_filename) > 240:
-                unique_filename = unique_filename[:240]
+            if len(unique_filename) > 200:  # Being more conservative
+                unique_filename = unique_filename[:200]
             
             # Log the processed filename
-            logger.info(f"Processed filename: {unique_filename}")
+            logger.info(f"Final filename: {unique_filename}")
             
-            # Path file lengkap
+            # Path file lengkap - ensure it's properly encoded for filesystem
             file_path = os.path.join(settings.MEDIA_ROOT, unique_filename)
             
             # Pastikan direktori ada
@@ -290,7 +314,8 @@ class FileUploadView(APIView):
             
             # Tulis file with chunking to handle large files better
             try:
-                with open(file_path, 'wb+') as destination:
+                # Use binary mode and handle filesystem encoding properly
+                with open(file_path, 'wb') as destination:
                     for chunk in file_obj.chunks(chunk_size=1024 * 1024):  # 1MB chunks
                         destination.write(chunk)
                         
@@ -318,6 +343,14 @@ class FileUploadView(APIView):
                 'size': file_obj.size,
                 'content_type': content_type or 'application/octet-stream'
             }, status=status.HTTP_201_CREATED)
+            
+        except UnicodeEncodeError as ue:
+            # Specific handling for Unicode errors
+            logger.error(f"Unicode encoding error: {str(ue)}", exc_info=True)
+            return Response({
+                'error': 'File name contains unsupported characters',
+                'detail': 'Please rename your file using only English letters, numbers, and basic symbols'
+            }, status=status.HTTP_400_BAD_REQUEST)
             
         except Exception as e:
             # Log the detailed error
