@@ -616,14 +616,3 @@ SESSION_SAVE_EVERY_REQUEST = True
 # MIDDLEWARE += [
 #     'django.contrib.admin.middleware.LogEntryMiddleware',
 # ]
-
-# Application root path for deployment in subdirectory
-# This is important for properly handling URLs in cPanel deployment
-APPLICATION_ROOT = '/server/'
-FORCE_SCRIPT_NAME = APPLICATION_ROOT
-
-# Media Serving Configuration
-# These settings control how media files are handled
-REMOVE_FILE_EXTENSIONS = True  # Remove file extensions when saving
-MEDIA_FORCE_DOWNLOAD_VIDEOS = True  # Force videos to download rather than play inline
-MEDIA_CORS_ALLOW_ALL = True  # Add CORS headers to allow cross-origin media access

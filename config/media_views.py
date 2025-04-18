@@ -41,6 +41,10 @@ class ProtectedMediaView(APIView):
     Authentication methods:
     1. Standard DRF authentication (token in header, session)
     2. Token in query parameter: ?auth_token=<token>
+    
+    Special handling:
+    - Video files are publicly accessible without authentication
+    - All other file types require authentication
     """
     permission_classes = [IsAuthenticated]
     authentication_classes = [SessionAuthentication, TokenAuthentication]
@@ -61,10 +65,35 @@ class ProtectedMediaView(APIView):
         except Token.DoesNotExist:
             return None
     
+    def check_permissions(self, request):
+        """
+        Override permission check to allow public access to video files.
+        For other file types, perform normal permission checks.
+        """
+        # Get the requested path from kwargs
+        path = self.kwargs.get('path', '')
+        
+        # Check if this is a video file based on extension
+        if path.lower().endswith(('.mp4', '.webm', '.avi', '.mov', '.wmv', '.flv', '.mkv')):
+            # Skip permission checks for video files
+            logger = logging.getLogger('apps')
+            logger.info(f"Public access granted for video file: {path}")
+            return None
+        
+        # For non-video files, apply standard permission checks
+        return super().check_permissions(request)
+    
     def initial(self, request, *args, **kwargs):
         """
         Perform authentication using query param if needed before regular authentication.
         """
+        # Get the requested path from kwargs
+        path = kwargs.get('path', '')
+        
+        # Check if this is a video file - if so, skip authentication entirely
+        if path.lower().endswith(('.mp4', '.webm', '.avi', '.mov', '.wmv', '.flv', '.mkv')):
+            return None
+        
         # Check for auth_token in query parameters
         auth_token = request.query_params.get('auth_token')
         
@@ -95,10 +124,6 @@ class ProtectedMediaView(APIView):
         # Path file lengkap
         file_path = os.path.join(settings.MEDIA_ROOT, path)
         
-        # Log file access attempt
-        logger = logging.getLogger('apps')
-        logger.info(f"Media access attempt: {path} by user {request.user}")
-        
         # Cek apakah file ada
         if not os.path.exists(file_path) or not os.path.isfile(file_path):
             if 'application/json' in request.META.get('HTTP_ACCEPT', ''):
@@ -113,9 +138,6 @@ class ProtectedMediaView(APIView):
         # Dapatkan ukuran file
         file_size = os.path.getsize(file_path)
         
-        # Log file size for debugging
-        logger.info(f"Serving file: {path}, size: {file_size} bytes")
-        
         # Tentukan content type
         content_type, encoding = mimetypes.guess_type(file_path)
         
@@ -129,17 +151,19 @@ class ProtectedMediaView(APIView):
                 
         content_type = content_type or 'application/octet-stream'
         
-        # Check if this is a video file for special handling
-        is_video = content_type and content_type.startswith('video/')
+        # Check if it's a video file by content type
+        is_video = content_type.startswith('video/') or path.lower().endswith(('.mp4', '.webm', '.avi', '.mov', '.wmv', '.flv', '.mkv'))
+        
+        # Log access information
+        logger = logging.getLogger('apps')
+        auth_type = "public" if is_video else "authenticated"
+        logger.info(f"{auth_type} media access: {path} ({content_type})")
         
         # Cek apakah ada header Range untuk permintaan sebagian file
         range_header = request.META.get('HTTP_RANGE', '').strip()
         range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
         
         if range_match:
-            # Log range request
-            logger.info(f"Range request received: {range_header}")
-            
             # Ini adalah permintaan range (partial content)
             start = int(range_match.group(1))
             end = int(range_match.group(2)) if range_match.group(2) else file_size - 1
@@ -160,41 +184,12 @@ class ProtectedMediaView(APIView):
             response['Content-Range'] = f'bytes {start}-{end}/{file_size}'
             response['Accept-Ranges'] = 'bytes'
         else:
-            # Log full content request
-            logger.info(f"Full content request for: {path}")
-            
-            # Check file size for chunked response
-            if file_size > 10 * 1024 * 1024 and is_video:  # > 10MB and is video
-                # For large video files, it's better to encourage range requests
-                response = FileResponse(open(file_path, 'rb'), content_type=content_type)
-                response['Content-Length'] = str(file_size)
-                response['Accept-Ranges'] = 'bytes'
-                logger.info("Serving large video with Accept-Ranges header")
-            else:
-                # Ini permintaan konten lengkap untuk file kecil
-                response = FileResponse(open(file_path, 'rb'), content_type=content_type)
-                response['Content-Length'] = str(file_size)
-                response['Accept-Ranges'] = 'bytes'
+            # Ini permintaan konten lengkap
+            response = FileResponse(open(file_path, 'rb'), content_type=content_type)
+            response['Content-Length'] = str(file_size)
+            response['Accept-Ranges'] = 'bytes'
         
-        # Add CORS headers to support cross-origin video playback
-        if getattr(settings, 'MEDIA_CORS_ALLOW_ALL', False):
-            response['Access-Control-Allow-Origin'] = '*'
-            response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-            response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-        
-        # Set different Content-Disposition based on file type and settings
-        if is_video and getattr(settings, 'MEDIA_FORCE_DOWNLOAD_VIDEOS', False):
-            # For videos, attachment often works better in problematic environments
-            # Note the "attachment" instead of "inline" - this can help with certain browser/server combinations
-            response['Content-Disposition'] = f'attachment; filename="{os.path.basename(file_path)}"'
-            logger.info(f"Set Content-Disposition: attachment for video file")
-        else:
-            # For non-video files, use inline to display in browser
-            response['Content-Disposition'] = f'inline; filename="{os.path.basename(file_path)}"'
-        
-        # Set Cache-Control for better performance
-        response['Cache-Control'] = 'max-age=86400, public'  # 1 day cache
-        
+        response['Content-Disposition'] = f'inline; filename="{os.path.basename(file_path)}"'
         return response
 
 # Legacy function for backward compatibility - redirects to the class-based view
