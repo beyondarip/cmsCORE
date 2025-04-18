@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
+from rest_framework.authtoken.models import Token
 import os
 import mimetypes
 import json
@@ -33,9 +34,47 @@ class ProtectedMediaView(APIView):
     
     This replaces the previous function-based view to provide more consistent
     authentication support, especially for API clients.
+    
+    Authentication methods:
+    1. Standard DRF authentication (token in header, session)
+    2. Token in query parameter: ?auth_token=<token>
     """
     permission_classes = [IsAuthenticated]
     authentication_classes = [SessionAuthentication, TokenAuthentication]
+    
+    def get_user_from_token(self, token_key):
+        """
+        Get user from token key.
+        
+        Args:
+            token_key: The token key string
+            
+        Returns:
+            User instance or None if token is invalid
+        """
+        try:
+            token = Token.objects.get(key=token_key)
+            return token.user
+        except Token.DoesNotExist:
+            return None
+    
+    def initial(self, request, *args, **kwargs):
+        """
+        Perform authentication using query param if needed before regular authentication.
+        """
+        # Check for auth_token in query parameters
+        auth_token = request.query_params.get('auth_token')
+        
+        # If auth_token provided and user is not already authenticated
+        if auth_token and (not request.user or not request.user.is_authenticated):
+            user = self.get_user_from_token(auth_token)
+            if user:
+                # Manually set authenticated user
+                request.user = user
+                return
+        
+        # Fall back to regular authentication
+        super().initial(request, *args, **kwargs)
     
     def get(self, request, path, format=None):
         """
