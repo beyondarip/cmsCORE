@@ -24,7 +24,7 @@ from django.views.static import serve
 
 from django.shortcuts import render
 from .views import page_not_found, home_view
-from .media_views import ProtectedMediaView, FileUploadView, FileListView
+from .media_views import protected_serve
 from .db_backup_views import backup_database, list_database_backups
 
 def test_404(request):
@@ -32,7 +32,8 @@ def test_404(request):
     return render(request, '404.html', status=200)
 
 urlpatterns = [
-    re_path(r'^fjowejao/(?P<path>.*)$', ProtectedMediaView.as_view(), name='protected_media'),
+    re_path(r'^fjowejao/(?P<path>.*)$', protected_serve, name='protected_media'),
+    static("media/", document_root=settings.MEDIA_ROOT),
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
     path('404/', page_not_found, name='404'),
     path('', home_view, name='home'),

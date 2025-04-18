@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 from rest_framework.authtoken.models import Token
+from django.views.static import serve
 import os
 import mimetypes
 import json
@@ -20,7 +21,7 @@ import unicodedata
 import uuid
 
 # Configuration from settings instead of hardcoding
-REMOVE_FILE_EXTENSIONS = getattr(settings, 'REMOVE_FILE_EXTENSIONS', True)
+REMOVE_FILE_EXTENSIONS = getattr(settings, 'REMOVE_FILE_EXTENSIONS', False)
 
 # Import Python's magic module if available
 try:
@@ -29,140 +30,76 @@ try:
 except ImportError:
     MAGIC_AVAILABLE = False
 
-class ProtectedMediaView(APIView):
-    """
-    Class-based API view for serving protected media files.
-    Supports both session and token authentication.
-    Handles HTTP Range Requests for streaming video with adjustable position.
-    
-    This replaces the previous function-based view to provide more consistent
-    authentication support, especially for API clients.
-    
-    Authentication methods:
-    1. Standard DRF authentication (token in header, session)
-    2. Token in query parameter: ?auth_token=<token>
-    """
-    permission_classes = [IsAuthenticated]
-    authentication_classes = [SessionAuthentication, TokenAuthentication]
-    
-    def get_user_from_token(self, token_key):
-        """
-        Get user from token key.
-        
-        Args:
-            token_key: The token key string
-            
-        Returns:
-            User instance or None if token is invalid
-        """
-        try:
-            token = Token.objects.get(key=token_key)
-            return token.user
-        except Token.DoesNotExist:
-            return None
-    
-    def initial(self, request, *args, **kwargs):
-        """
-        Perform authentication using query param if needed before regular authentication.
-        """
-        # Check for auth_token in query parameters
-        auth_token = request.query_params.get('auth_token')
-        
-        # If auth_token provided and user is not already authenticated
-        if auth_token and (not request.user or not request.user.is_authenticated):
-            user = self.get_user_from_token(auth_token)
-            if user:
-                # Manually set authenticated user
-                request.user = user
-                return
-        
-        # Fall back to regular authentication
-        super().initial(request, *args, **kwargs)
-    
-    def get(self, request, path, format=None):
-        """
-        Serves the requested media file with authentication checks.
-        Supports HTTP Range Requests for streaming.
-        
-        Args:
-            request: HTTP request
-            path: Path to the file in MEDIA_ROOT
-            
-        Returns:
-            FileResponse if authenticated, with range request support
-            Response with error details if not authenticated or file not found
-        """
-        # Path file lengkap
-        file_path = os.path.join(settings.MEDIA_ROOT, path)
-        
-        # Cek apakah file ada
-        if not os.path.exists(file_path) or not os.path.isfile(file_path):
-            if 'application/json' in request.META.get('HTTP_ACCEPT', ''):
-                return Response({
-                    'error': 'Not Found', 
-                    'message': 'File tidak ditemukan.'
-                }, status=status.HTTP_404_NOT_FOUND)
-            
-            # Kembalikan halaman 404
-            return render(request, '404.html', status=404)
-        
-        # Dapatkan ukuran file
-        file_size = os.path.getsize(file_path)
-        
-        # Tentukan content type
-        content_type, encoding = mimetypes.guess_type(file_path)
-        
-        # If content_type is not determined by extension, try using magic module
-        if not content_type and MAGIC_AVAILABLE:
-            try:
-                mime = magic.Magic(mime=True)
-                content_type = mime.from_file(file_path)
-            except Exception:
-                pass
-                
-        content_type = content_type or 'application/octet-stream'
-        
-        # Cek apakah ada header Range untuk permintaan sebagian file
-        range_header = request.META.get('HTTP_RANGE', '').strip()
-        range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
-        
-        if range_match:
-            # Ini adalah permintaan range (partial content)
-            start = int(range_match.group(1))
-            end = int(range_match.group(2)) if range_match.group(2) else file_size - 1
-            
-            # Pastikan end tidak melebihi ukuran file
-            end = min(end, file_size - 1)
-            
-            # Ukuran konten yang akan dikirim
-            content_length = end - start + 1
-            
-            # Buka file dan posisikan ke start byte
-            file_obj = open(file_path, 'rb')
-            file_obj.seek(start)
-            
-            # Buat response
-            response = FileResponse(file_obj, content_type=content_type, status=206)
-            response['Content-Length'] = str(content_length)
-            response['Content-Range'] = f'bytes {start}-{end}/{file_size}'
-            response['Accept-Ranges'] = 'bytes'
-        else:
-            # Ini permintaan konten lengkap
-            response = FileResponse(open(file_path, 'rb'), content_type=content_type)
-            response['Content-Length'] = str(file_size)
-            response['Accept-Ranges'] = 'bytes'
-        
-        response['Content-Disposition'] = f'inline; filename="{os.path.basename(file_path)}"'
-        return response
+def is_video_file(path):
+    """Helper function to check if a file is a video based on extension"""
+    video_extensions = ('.mp4', '.webm', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.m4v', '.3gp', '.ogg')
+    return path.lower().endswith(video_extensions)
 
-# Legacy function for backward compatibility - redirects to the class-based view
 def protected_serve(request, path):
     """
-    Legacy function that delegates to ProtectedMediaView class.
-    Kept for backward compatibility.
+    Function-based view for serving protected media files.
+    Video files are publicly accessible, other files require authentication.
+    
+    Uses Django's built-in serve function for reliable file serving.
+    
+    Args:
+        request: HTTP request
+        path: Path to the file in MEDIA_ROOT
+        
+    Returns:
+        Served file if authenticated or if it's a video
+        403 Forbidden if not authenticated
+        404 Not Found if file doesn't exist
     """
-    view = ProtectedMediaView.as_view()
-    return view(request, path=path)
+    logger = logging.getLogger('apps')
+    logger.info(f"Media request: {path}")
+    
+    # Check if this is a video file (public access allowed)
+    # if is_video_file(path):
+    #     logger.info(f"Public access for video: {path}")
+    #     return serve(request, path, document_root=settings.MEDIA_ROOT)
+    
+    # For non-video files, check authentication
+    if not request.user.is_authenticated:
+        # Check for token in query param
+        auth_token = request.GET.get('auth_token')
+        if auth_token:
+            try:
+                token = Token.objects.get(key=auth_token)
+                # Token valid, continue to serve file
+                logger.info(f"Token auth successful for: {path}")
+            except Token.DoesNotExist:
+                logger.warning(f"Invalid token attempt for: {path}")
+                # Return 403 or redirect to login
+                if 'application/json' in request.META.get('HTTP_ACCEPT', ''):
+                    return JsonResponse({
+                        'error': 'Unauthorized', 
+                        'message': 'Anda harus login untuk mengakses file ini.'
+                    }, status=403)
+                return render(request, '404.html', status=404)
+        else:
+            logger.warning(f"Unauthorized access attempt for: {path}")
+            # Return 403 or redirect to login
+            if 'application/json' in request.META.get('HTTP_ACCEPT', ''):
+                return JsonResponse({
+                    'error': 'Unauthorized', 
+                    'message': 'Anda harus login untuk mengakses file ini.'
+                }, status=403)
+            return render(request, '404.html', status=404)
+    
+    # User is authenticated (either via session or token), serve the file
+    logger.info(f"Authenticated access for: {path}")
+    
+    # Add cache headers
+    response = serve(request, path, document_root=settings.MEDIA_ROOT)
+    
+    # Set cache headers
+    if is_video_file(path):
+        response['Cache-Control'] = 'public, max-age=86400'  # 24 hours
+    else:
+        response['Cache-Control'] = 'public, max-age=3600'  # 1 hour
+    
+    return response
 
 @method_decorator(csrf_exempt, name='dispatch')
 class FileDeleteView(APIView):
