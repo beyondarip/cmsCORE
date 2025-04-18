@@ -18,6 +18,7 @@ import re
 import logging
 import unicodedata
 import uuid
+import urllib.parse
 
 # Configuration from settings instead of hardcoding
 REMOVE_FILE_EXTENSIONS = getattr(settings, 'REMOVE_FILE_EXTENSIONS', True)
@@ -62,6 +63,10 @@ def protected_serve(request, path):
     """
     logger = logging.getLogger('apps')
     logger.info(f"Media request: {path}")
+    
+    # URL-decode the path to handle spaces and special characters
+    path = urllib.parse.unquote(path)
+    logger.info(f"Decoded path: {path}")
     
     # Check if user is authenticated via session
     authenticated = request.user.is_authenticated
@@ -354,8 +359,11 @@ class FileUploadView(APIView):
             server_prefix = getattr(settings, 'SERVER_PREFIX', '')  # Get from settings with fallback
             media_url = settings.MEDIA_URL.rstrip('/')
             
+            # URL encode the filename to handle spaces and special characters
+            encoded_filename = urllib.parse.quote(unique_filename)
+            
             # Construct the complete URL with all required path components
-            file_url = f"{base_url}{server_prefix}{media_url}/{unique_filename}"
+            file_url = f"{base_url}{server_prefix}{media_url}/{encoded_filename}"
             logger.info(f"Generated file URL: {file_url}")
             
             # Ensure the file exists before returning success
@@ -461,8 +469,11 @@ class FileListView(APIView):
                 server_prefix = getattr(settings, 'SERVER_PREFIX', '')  # Get from settings with fallback
                 media_url = settings.MEDIA_URL.rstrip('/')
                 
+                # URL encode the path to handle spaces and special characters
+                encoded_path = urllib.parse.quote(rel_path)
+                
                 # Construct the full URL with all path components
-                file_url = f"{base_url}{server_prefix}{media_url}/{rel_path}"
+                file_url = f"{base_url}{server_prefix}{media_url}/{encoded_path}"
                 
                 logger.info(f"Generated file URL: {file_url}")
                 
