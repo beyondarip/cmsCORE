@@ -15,6 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 import datetime
 from django.utils.decorators import method_decorator
 import re
+import logging
 
 # Configuration from settings instead of hardcoding
 REMOVE_FILE_EXTENSIONS = getattr(settings, 'REMOVE_FILE_EXTENSIONS', True)
@@ -233,48 +234,100 @@ class FileUploadView(APIView):
         return Response(status=status.HTTP_200_OK)
     
     def post(self, request, format=None):
-        file_obj = request.FILES.get('file')
+        logger = logging.getLogger('apps')  # Use the configured logger
         
-        if not file_obj:
-            return Response({'error': 'No file found'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Get the original file name
-        original_filename = file_obj.name
-        
-        # If configured to remove extensions, strip the extension
-        if REMOVE_FILE_EXTENSIONS:
-            # Split the filename into base and extension
-            base_name, ext = os.path.splitext(original_filename)
-            # Use just the base name without extension
-            save_filename = base_name
-            # Keep original extension for content type detection
-            content_type, _ = mimetypes.guess_type(original_filename)
-        else:
-            # Use the original filename with extension
-            save_filename = original_filename
-            content_type = None
-        
-        # Simpan file dengan nama yang sudah dimodifikasi
-        file_path = os.path.join(settings.MEDIA_ROOT, save_filename)
-        
-        # Pastikan direktori ada
-        os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
-        
-        # Tulis file
-        with open(file_path, 'wb+') as destination:
-            for chunk in file_obj.chunks():
-                destination.write(chunk)
-        
-        # Return URL with the new filename - Using Django's settings instead of hardcoding
-        media_url = settings.MEDIA_URL.rstrip('/')
-        file_url = f"{request.scheme}://{request.get_host()}{media_url}/{save_filename}"
-        
-        return Response({
-            'message': 'File uploaded successfully',
-            'file_name': save_filename,
-            'original_name': original_filename,
-            'url': file_url
-        }, status=status.HTTP_201_CREATED)
+        try:
+            file_obj = request.FILES.get('file')
+            
+            if not file_obj:
+                return Response({'error': 'No file found'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Log file information for debugging
+            logger.info(f"Uploading file: {file_obj.name}, Size: {file_obj.size} bytes, Content-Type: {file_obj.content_type}")
+            
+            # Get the original file name
+            original_filename = file_obj.name
+            
+            # Sanitize filename to remove problematic characters
+            sanitized_name = re.sub(r'[^\w\s.-]', '_', original_filename)
+            sanitized_name = re.sub(r'\s+', '_', sanitized_name)
+            
+            # If configured to remove extensions, strip the extension
+            if REMOVE_FILE_EXTENSIONS:
+                # Split the filename into base and extension
+                base_name, ext = os.path.splitext(sanitized_name)
+                # Use just the base name without extension
+                save_filename = base_name
+                # Keep original extension for content type detection
+                content_type, _ = mimetypes.guess_type(original_filename)
+            else:
+                # Use the sanitized filename with extension
+                save_filename = sanitized_name
+                content_type = file_obj.content_type or None
+            
+            # Create a unique filename to avoid conflicts
+            timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+            unique_filename = f"{save_filename}_{timestamp}"
+            
+            # Ensure the filename doesn't exceed filesystem limits (typically 255 chars)
+            if len(unique_filename) > 240:
+                unique_filename = unique_filename[:240]
+            
+            # Log the processed filename
+            logger.info(f"Processed filename: {unique_filename}")
+            
+            # Path file lengkap
+            file_path = os.path.join(settings.MEDIA_ROOT, unique_filename)
+            
+            # Pastikan direktori ada
+            os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
+            
+            # Try to determine if we need special handling for video files
+            is_video = False
+            if hasattr(file_obj, 'content_type') and file_obj.content_type and file_obj.content_type.startswith('video/'):
+                is_video = True
+                logger.info(f"Handling video file: {file_obj.content_type}")
+            
+            # Tulis file with chunking to handle large files better
+            try:
+                with open(file_path, 'wb+') as destination:
+                    for chunk in file_obj.chunks(chunk_size=1024 * 1024):  # 1MB chunks
+                        destination.write(chunk)
+                        
+                logger.info(f"File successfully written to {file_path}")
+            except Exception as e:
+                logger.error(f"Error writing file: {str(e)}")
+                raise
+            
+            # Return URL with the new filename - Using Django's settings instead of hardcoding
+            media_url = settings.MEDIA_URL.rstrip('/')
+            file_url = f"{request.scheme}://{request.get_host()}{media_url}/{unique_filename}"
+            
+            # Ensure the file exists before returning success
+            if not os.path.exists(file_path):
+                logger.error(f"File was not successfully saved: {file_path}")
+                return Response({
+                    'error': 'Failed to save file'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            return Response({
+                'message': 'File uploaded successfully',
+                'file_name': unique_filename,
+                'original_name': original_filename,
+                'url': file_url,
+                'size': file_obj.size,
+                'content_type': content_type or 'application/octet-stream'
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            # Log the detailed error
+            logger.error(f"File upload error: {str(e)}", exc_info=True)
+            
+            # Return a generic error message to the client
+            return Response({
+                'error': 'Server error during file upload',
+                'detail': str(e) if settings.DEBUG else 'Contact administrator for details'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class FileListView(APIView):
