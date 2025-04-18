@@ -32,7 +32,7 @@ def test_404(request):
     return render(request, '404.html', status=200)
 
 urlpatterns = [
-    re_path(r'^fjowejao/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    re_path(r'^fjowejao/(?P<path>.*)$', ProtectedMediaView.as_view(), name='protected_media'),
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
     path('404/', page_not_found, name='404'),
     path('', home_view, name='home'),
