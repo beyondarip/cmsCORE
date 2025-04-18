@@ -333,14 +333,17 @@ class FileUploadView(APIView):
             # Log the processed filename
             logger.info(f"Final filename: {unique_filename}")
             
-            # Pastikan direktori ada
-            os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
-            
             # Try to determine if we need special handling for video files
             is_video = False
             if hasattr(file_obj, 'content_type') and file_obj.content_type and file_obj.content_type.startswith('video/'):
                 is_video = True
                 logger.info(f"Handling video file: {file_obj.content_type}")
+            
+            # Ensure directory exists with proper encoding support
+            os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
+            
+            # Log path before writing
+            logger.info(f"Attempting to write file to: {file_path}")
             
             # Tulis file with chunking to handle large files better
             try:
@@ -351,7 +354,7 @@ class FileUploadView(APIView):
                         
                 logger.info(f"File successfully written to {file_path}")
             except Exception as e:
-                logger.error(f"Error writing file: {str(e)}")
+                logger.error(f"Error writing file: {str(e)}", exc_info=True)
                 raise
             
             # Get the base URL and server prefix for full URL construction
@@ -381,14 +384,6 @@ class FileUploadView(APIView):
                 'size': file_obj.size,
                 'content_type': content_type or 'application/octet-stream'
             }, status=status.HTTP_201_CREATED)
-            
-        except UnicodeEncodeError as ue:
-            # Specific handling for Unicode errors
-            logger.error(f"Unicode encoding error: {str(ue)}", exc_info=True)
-            return Response({
-                'error': 'File name contains unsupported characters',
-                'detail': 'Please rename your file using only English letters, numbers, and basic symbols'
-            }, status=status.HTTP_400_BAD_REQUEST)
             
         except Exception as e:
             # Log the detailed error

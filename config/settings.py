@@ -408,6 +408,10 @@ USE_I18N = True
 
 USE_TZ = True
 
+# File system settings
+FILE_CHARSET = 'utf-8'  # Ensure all file operations use UTF-8
+ALLOW_UNICODE_FILENAMES = True  # Enable Unicode filename support
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
