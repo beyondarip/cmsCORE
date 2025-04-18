@@ -412,72 +412,94 @@ class FileListView(APIView):
         """
         Return a list of all uploaded files
         """
+        logger = logging.getLogger('apps')
         files = []
         
-        # Pastikan MEDIA_ROOT ada
-        if not os.path.exists(settings.MEDIA_ROOT):
-            return Response(files, status=status.HTTP_200_OK)
-        
-        # Iterate through all files in MEDIA_ROOT
-        for root, dirs, filenames in os.walk(settings.MEDIA_ROOT):
-            for filename in filenames:
-                file_path = os.path.join(root, filename)
-                rel_path = os.path.relpath(file_path, settings.MEDIA_ROOT)
-                
-                # Get file stats
-                file_stat = os.stat(file_path)
-                size_bytes = file_stat.st_size
-                modified_time = datetime.datetime.fromtimestamp(file_stat.st_mtime)
-                
-                # Use a more compact date format (YYYY-MM-DD)
-                modified_date = modified_time.strftime("%Y-%m-%d")
-                
-                # Determine file type
-                content_type, _ = mimetypes.guess_type(file_path)
-                
-                # If content_type is not determined by extension, try using magic module
-                if not content_type and MAGIC_AVAILABLE:
+        try:
+            # Pastikan MEDIA_ROOT ada
+            if not os.path.exists(settings.MEDIA_ROOT):
+                logger.warning(f"MEDIA_ROOT directory does not exist: {settings.MEDIA_ROOT}")
+                return Response(files, status=status.HTTP_200_OK)
+            
+            logger.info(f"Scanning directory: {settings.MEDIA_ROOT}")
+            
+            # Iterate through all files in MEDIA_ROOT
+            for root, dirs, filenames in os.walk(settings.MEDIA_ROOT):
+                for filename in filenames:
                     try:
-                        mime = magic.Magic(mime=True)
-                        content_type = mime.from_file(file_path)
-                    except Exception:
-                        pass
-                
-                content_type = content_type or 'application/octet-stream'
-                
-                # Extract file type category from content_type
-                file_type = "other"
-                if content_type:
-                    if content_type.startswith('image/'):
-                        file_type = "image"
-                    elif content_type.startswith('video/'):
-                        file_type = "video"
-                    elif content_type.startswith('audio/'):
-                        file_type = "audio"
-                    elif (content_type.startswith('application/pdf') or
-                          content_type.startswith('application/msword') or
-                          'officedocument' in content_type):
-                        file_type = "document"
-                
-                # Get URL using Django's settings
-                media_url = settings.MEDIA_URL.rstrip('/')
-                file_url = f"{request.scheme}://{request.get_host()}{media_url}/{rel_path}"
-                print(file_url)
-                # Add file info to list with more compact representation
-                files.append({
-                    'name': filename,
-                    'path': rel_path,
-                    'url': file_url,
-                    'size': self._format_file_size(size_bytes),
-                    'type': file_type,
-                    'content_type': content_type,  # Include actual content type for debugging
-                    'modified': modified_date
-                })
-        
-        # Sort files by modified date (newest first)
-        files.sort(key=lambda x: x['modified'], reverse=True)
-        
-        return Response(files, status=status.HTTP_200_OK)
+                        file_path = os.path.join(root, filename)
+                        rel_path = os.path.relpath(file_path, settings.MEDIA_ROOT)
+                        
+                        # Get file stats
+                        file_stat = os.stat(file_path)
+                        size_bytes = file_stat.st_size
+                        modified_time = datetime.datetime.fromtimestamp(file_stat.st_mtime)
+                        
+                        # Use a more compact date format (YYYY-MM-DD)
+                        modified_date = modified_time.strftime("%Y-%m-%d")
+                        
+                        # Determine file type
+                        content_type = None
+                        try:
+                            content_type, _ = mimetypes.guess_type(file_path)
+                            
+                            # If content_type is not determined by extension, try using magic module
+                            if not content_type and MAGIC_AVAILABLE:
+                                try:
+                                    mime = magic.Magic(mime=True)
+                                    content_type = mime.from_file(file_path)
+                                except Exception as magic_error:
+                                    logger.warning(f"Magic module error for {filename}: {str(magic_error)}")
+                        except Exception as mime_error:
+                            logger.warning(f"Mime type error for {filename}: {str(mime_error)}")
+                        
+                        content_type = content_type or 'application/octet-stream'
+                        
+                        # Extract file type category from content_type
+                        file_type = "other"
+                        if content_type:
+                            if content_type.startswith('image/'):
+                                file_type = "image"
+                            elif content_type.startswith('video/'):
+                                file_type = "video"
+                            elif content_type.startswith('audio/'):
+                                file_type = "audio"
+                            elif (content_type.startswith('application/pdf') or
+                                content_type.startswith('application/msword') or
+                                'officedocument' in content_type):
+                                file_type = "document"
+                        
+                        # Get URL using Django's settings
+                        media_url = settings.MEDIA_URL.rstrip('/')
+                        file_url = f"{request.scheme}://{request.get_host()}{media_url}/{rel_path}"
+                        
+                        # Add file info to list with more compact representation
+                        files.append({
+                            'name': filename,
+                            'path': rel_path,
+                            'url': file_url,
+                            'size': self._format_file_size(size_bytes),
+                            'type': file_type,
+                            'content_type': content_type,  # Include actual content type for debugging
+                            'modified': modified_date
+                        })
+                    except Exception as file_error:
+                        # Log the error but continue processing other files
+                        logger.error(f"Error processing file {filename}: {str(file_error)}", exc_info=True)
+                        continue
+            
+            # Sort files by modified date (newest first)
+            files.sort(key=lambda x: x['modified'], reverse=True)
+            
+            logger.info(f"Successfully listed {len(files)} files")
+            return Response(files, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Error in file listing: {str(e)}", exc_info=True)
+            return Response({
+                'error': 'Server error during file listing',
+                'detail': str(e) if settings.DEBUG else 'Contact administrator for details'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     def _format_file_size(self, size_bytes):
         """Format file size in a human-readable format"""
