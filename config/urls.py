@@ -24,14 +24,18 @@ from django.views.static import serve
 
 from django.shortcuts import render
 from .views import page_not_found, home_view
-from .media_views import protected_serve
+from .media_views import protected_serve, FileUploadView, FileListView
 from .db_backup_views import backup_database, list_database_backups
 
 def test_404(request):
     """View untuk testing halaman 404"""
     return render(request, '404.html', status=200)
 
+
+
+# Base URL patterns
 urlpatterns = [
+    # Use function-based view for media serving
     re_path(r'^fjowejao/(?P<path>.*)$', protected_serve, name='protected_media'),
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
     path('404/', page_not_found, name='404'),
@@ -40,13 +44,13 @@ urlpatterns = [
     path('da42FH0V5PGs7Hon1YTO/', include('apps.members.urls', namespace='members')),
     path('django_f', TemplateView.as_view(template_name='index.html'), name='django_f'),
 ]
-# ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    # path("__reload__/", include("django_browser_reload.urls")),
-    # path('<slug:slug>/', page_view, name='page_view'),
 
-
+# Add static files handling
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# IMPORTANT: We need to comment out this line as it conflicts with our protected_serve
+# We'll handle this differently in the protected_serve function
+# urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # Set up custom error handlers
 handler404 = 'config.views.page_not_found'

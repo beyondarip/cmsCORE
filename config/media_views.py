@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 from rest_framework.authtoken.models import Token
 from django.views.static import serve
+from django.conf.urls.static import static
 import os
 import mimetypes
 import json
@@ -35,54 +36,65 @@ def is_video_file(path):
     video_extensions = ('.mp4', '.webm', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.m4v', '.3gp', '.ogg')
     return path.lower().endswith(video_extensions)
 
+def is_media_file(path):
+    """Helper function to check if a file is media (video or audio)"""
+    audio_extensions = ('.mp3', '.wav', '.ogg', '.m4a', '.aac')
+    return is_video_file(path) or path.lower().endswith(audio_extensions)
+
 def protected_serve(request, path):
     """
     Function-based view for serving protected media files.
-    Video files are publicly accessible, other files require authentication.
     
-    Supports HTTP Range requests for video seeking and position control.
+    Key features:
+    - ALL files (including media) require authentication (session or token)
+    - Uses Django's native static serving for media files to ensure full playback
+    - Uses regular serve for other files
+    
+    This ensures that videos/audio files play completely without interruption
+    while still requiring authentication for all file types.
     
     Args:
         request: HTTP request
         path: Path to the file in MEDIA_ROOT
         
     Returns:
-        Served file if authenticated or if it's a video
+        Django's static.serve response for authenticated users
         403 Forbidden if not authenticated
-        404 Not Found if file doesn't exist
     """
     logger = logging.getLogger('apps')
     logger.info(f"Media request: {path}")
-
-    if not request.user.is_authenticated:
-        # For non-video files, check authentication
-        # Check for token in query param
+    
+    # Check if user is authenticated via session
+    authenticated = request.user.is_authenticated
+    
+    # If not, check for token authentication
+    if not authenticated:
         auth_token = request.GET.get('auth_token')
         if auth_token:
             try:
                 token = Token.objects.get(key=auth_token)
-                # Token valid, continue to serve file
+                # Token is valid, consider the user authenticated
+                authenticated = True
                 logger.info(f"Token auth successful for: {path}")
             except Token.DoesNotExist:
+                authenticated = False
                 logger.warning(f"Invalid token attempt for: {path}")
-                # Return 403 or redirect to login
-                if 'application/json' in request.META.get('HTTP_ACCEPT', ''):
-                    return JsonResponse({
-                        'error': 'Unauthorized', 
-                        'message': 'Anda harus login untuk mengakses file ini.'
-                    }, status=403)
-                return render(request, '404.html', status=404)
-        else:
-            logger.warning(f"Unauthorized access attempt for: {path}")
-            # Return 403 or redirect to login
-            if 'application/json' in request.META.get('HTTP_ACCEPT', ''):
-                return JsonResponse({
-                    'error': 'Unauthorized', 
-                    'message': 'Anda harus login untuk mengakses file ini.'
-                }, status=403)
-            return render(request, '404.html', status=404)
     
-    # User is authenticated or file is video, serve the file
+    # Require authentication for ALL files
+    if not authenticated:
+        logger.warning(f"Unauthorized access attempt for: {path}")
+        # Return 403 or redirect to login
+        if 'application/json' in request.META.get('HTTP_ACCEPT', ''):
+            return JsonResponse({
+                'error': 'Unauthorized', 
+                'message': 'Anda harus login untuk mengakses file ini.'
+            }, status=403)
+        return render(request, '404.html', status=404)
+    
+    # Check if this is a media file (video/audio)
+    is_media = is_media_file(path)
+    
+    # File path for checking existence
     file_path = os.path.join(settings.MEDIA_ROOT, path)
     
     # Check if file exists
@@ -95,72 +107,36 @@ def protected_serve(request, path):
             }, status=404)
         return render(request, '404.html', status=404)
     
-    # Get file size
-    file_size = os.path.getsize(file_path)
-    
-    # Get content type
-    content_type, encoding = mimetypes.guess_type(file_path)
-    if not content_type and MAGIC_AVAILABLE:
-        try:
-            mime = magic.Magic(mime=True)
-            content_type = mime.from_file(file_path)
-        except Exception as e:
-            logger.warning(f"Error determining content type: {str(e)}")
-    
-    content_type = content_type or 'application/octet-stream'
-    
-    # Check for Range header
-    range_header = request.META.get('HTTP_RANGE', '').strip()
-    range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
-    
-    if range_match:
-        # This is a range request (partial content)
-        start = int(range_match.group(1))
-        end = int(range_match.group(2)) if range_match.group(2) else file_size - 1
+    # For media files (video/audio): Use Django's static approach for full playback
+    if is_media:
+        logger.info(f"Serving media file with static approach: {path}")
         
-        # Make sure end doesn't exceed file size
-        end = min(end, file_size - 1)
+        # Get Django's native static handler (this is what static() URL helper uses)
+        handler, args, kwargs = static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)[0]
         
-        # Content length to send
-        content_length = end - start + 1
-        
-        logger.info(f"Range request: bytes {start}-{end}/{file_size}")
-        
-        # Open file and position at start byte
-        file_obj = open(file_path, 'rb')
-        file_obj.seek(start)
-        
-        # Create response with appropriate headers
-        response = FileResponse(file_obj, content_type=content_type, status=206)  # 206 Partial Content
-        response['Content-Length'] = str(content_length)
-        response['Content-Range'] = f'bytes {start}-{end}/{file_size}'
-        response['Accept-Ranges'] = 'bytes'
-    else:
-        # This is a full content request
-        logger.info(f"Full file request: {path}")
-        
-        # For standard requests, we'll use Django's serve for non-video files
-        # but handle video files ourselves for better control
-        if not is_video_file(path) and not range_header:
-            # For non-video files without range, use Django's serve
-            response = serve(request, path, document_root=settings.MEDIA_ROOT)
-        else:
-            # For videos or explicit range requests, create our own response
-            response = FileResponse(open(file_path, 'rb'), content_type=content_type)
-            response['Content-Length'] = str(file_size)
-            response['Accept-Ranges'] = 'bytes'
+        # Use the same view function that Django's urlpatterns += static() would use
+        return handler(request, path, **kwargs)
     
-    # Add cache control headers
-    if is_video_file(path):
-        response['Cache-Control'] = 'public, max-age=86400'  # 24 hours for videos
-    else:
-        response['Cache-Control'] = 'public, max-age=3600'   # 1 hour for other files
-    
-    # Set content disposition
-    filename = os.path.basename(file_path)
-    response['Content-Disposition'] = f'inline; filename="{filename}"'
-    
-    return response
+    # For authenticated users accessing non-media files, use regular serve
+    try:
+        logger.info(f"Serving protected file: {path}")
+        response = serve(request, path, document_root=settings.MEDIA_ROOT)
+        
+        # Add cache headers for better performance
+        response['Cache-Control'] = 'public, max-age=3600'  # 1 hour for non-media files
+        
+        # Set content disposition
+        filename = os.path.basename(file_path)
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error serving file {path}: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'error': 'Error serving file',
+            'detail': str(e) if settings.DEBUG else 'Contact administrator for details'
+        }, status=500)
 
 @method_decorator(csrf_exempt, name='dispatch')
 class FileDeleteView(APIView):
