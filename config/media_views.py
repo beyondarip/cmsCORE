@@ -15,8 +15,8 @@ import datetime
 from django.utils.decorators import method_decorator
 import re
 
-# Configuration toggle for removing file extensions
-REMOVE_FILE_EXTENSIONS = True
+# Configuration from settings instead of hardcoding
+REMOVE_FILE_EXTENSIONS = getattr(settings, 'REMOVE_FILE_EXTENSIONS', True)
 
 # Import Python's magic module if available
 try:
@@ -217,8 +217,9 @@ class FileUploadView(APIView):
             for chunk in file_obj.chunks():
                 destination.write(chunk)
         
-        # Return URL with the new filename
-        file_url = f"{request.scheme}://{request.get_host()}/fjowejao/{save_filename}"
+        # Return URL with the new filename - Using Django's settings instead of hardcoding
+        media_url = settings.MEDIA_URL.rstrip('/')
+        file_url = f"{request.scheme}://{request.get_host()}{media_url}/{save_filename}"
         
         return Response({
             'message': 'File uploaded successfully',
@@ -287,8 +288,9 @@ class FileListView(APIView):
                           'officedocument' in content_type):
                         file_type = "document"
                 
-                # Get URL
-                file_url = f"{request.scheme}://{request.get_host()}/fjowejao/{rel_path}"
+                # Get URL using Django's settings
+                media_url = settings.MEDIA_URL.rstrip('/')
+                file_url = f"{request.scheme}://{request.get_host()}{media_url}/{rel_path}"
                 
                 # Add file info to list with more compact representation
                 files.append({
@@ -315,4 +317,4 @@ class FileListView(APIView):
         elif size_bytes < 1024 * 1024 * 1024:
             return f"{size_bytes / (1024 * 1024):.1f} MB"
         else:
-            return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB" 
+            return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
