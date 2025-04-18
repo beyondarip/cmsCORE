@@ -47,18 +47,15 @@ def protected_serve(request, path):
     
     Key features:
     - ALL files (including media) require authentication (session or token)
-    - Uses Django's native static serving for media files to ensure full playback
-    - Uses regular serve for other files
-    
-    This ensures that videos/audio files play completely without interruption
-    while still requiring authentication for all file types.
+    - Custom range request handling for media files to ensure seeking works
+    - Uses regular serve for non-media files
     
     Args:
         request: HTTP request
         path: Path to the file in MEDIA_ROOT
         
     Returns:
-        Django's static.serve response for authenticated users
+        Django's response with proper range support for authenticated users
         403 Forbidden if not authenticated
     """
     logger = logging.getLogger('apps')
@@ -107,19 +104,96 @@ def protected_serve(request, path):
             }, status=404)
         return render(request, '404.html', status=404)
     
-    # For media files (video/audio): Use Django's static approach for full playback
+    # For media files, we need careful handling of range requests to enable seeking
     if is_media:
-        logger.info(f"Serving media file with static approach: {path}")
+        # Log that we're serving a media file
+        logger.info(f"Serving media file: {path}")
         
-        # Get Django's native static handler (this is what static() URL helper uses)
-        handler, args, kwargs = static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)[0]
+        # Get the file size
+        file_size = os.path.getsize(file_path)
         
-        # Use the same view function that Django's urlpatterns += static() would use
-        return handler(request, path, **kwargs)
+        # Determine content type
+        content_type, encoding = mimetypes.guess_type(file_path)
+        if not content_type and MAGIC_AVAILABLE:
+            try:
+                mime = magic.Magic(mime=True)
+                content_type = mime.from_file(file_path)
+            except Exception as e:
+                logger.warning(f"Magic content type detection failed: {str(e)}")
+        content_type = content_type or 'application/octet-stream'
+        
+        # Check for Range header
+        range_header = request.META.get('HTTP_RANGE', '').strip()
+        
+        # If Range header exists, handle range request
+        if range_header:
+            # Parse the range header
+            range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
+            
+            if range_match:
+                # Extract range values
+                start = int(range_match.group(1))
+                end = int(range_match.group(2)) if range_match.group(2) else file_size - 1
+                
+                # Ensure end doesn't exceed file size
+                end = min(end, file_size - 1)
+                content_length = end - start + 1
+                
+                logger.info(f"Range request: {start}-{end}/{file_size}")
+                
+                # Create response with the requested range
+                response = FileResponse(
+                    open(file_path, 'rb'),
+                    as_attachment=False,
+                    content_type=content_type,
+                    status=206  # Partial Content
+                )
+                
+                # Seek to the right position
+                response.file_to_stream.seek(start)
+                
+                # Set required headers for range requests
+                response['Content-Length'] = str(content_length)
+                response['Content-Range'] = f'bytes {start}-{end}/{file_size}'
+                response['Accept-Ranges'] = 'bytes'
+            else:
+                # Invalid range format
+                logger.warning(f"Invalid range header: {range_header}")
+                
+                # Serve full file
+                response = FileResponse(
+                    open(file_path, 'rb'),
+                    as_attachment=False,
+                    content_type=content_type
+                )
+                response['Content-Length'] = str(file_size)
+                response['Accept-Ranges'] = 'bytes'
+        else:
+            # No range header, serve full file
+            response = FileResponse(
+                open(file_path, 'rb'),
+                as_attachment=False,
+                content_type=content_type
+            )
+            response['Content-Length'] = str(file_size)
+            response['Accept-Ranges'] = 'bytes'
+        
+        # Set cache headers for better performance
+        response['Cache-Control'] = 'public, max-age=86400'  # 24 hours
+        
+        # Set content disposition
+        filename = os.path.basename(file_path)
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        
+        # Additional headers that might help with seeking
+        response['X-Content-Duration'] = str(file_size)
+        response['Content-Duration'] = str(file_size)
+        
+        return response
     
     # For authenticated users accessing non-media files, use regular serve
     try:
-        logger.info(f"Serving protected file: {path}")
+        logger.info(f"Serving protected non-media file: {path}")
         response = serve(request, path, document_root=settings.MEDIA_ROOT)
         
         # Add cache headers for better performance
