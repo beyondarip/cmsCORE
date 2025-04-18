@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sitemaps',
     'django.contrib.sites',
+    'corsheaders',
     'drf_yasg',
     'django_filters',
 
@@ -71,7 +72,6 @@ INSTALLED_APPS = [
     'rest_framework',  # Make sure DRF is installed
     'rest_framework.authtoken',
     'dj_rest_auth',
-    'corsheaders',
     
     # Local apps
     'apps.members.apps.MembersConfig',  # Make sure this matches exactly
@@ -115,7 +115,11 @@ CORS_ALLOW_ALL_ORIGINS = True  # Only in developmen
 # Add this to your settings.py
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',  # Your Vue dev server
-    # Add any other origins as needed
+    'https://cms-2sn7d.kinsta.app/', 
+    'https://cms-2sn7d.kinsta.app/', 
+    'https://*.kinsta.app',
+    'https://*.127.0.0.1', 
+    'https://www.matanauniversity.ac.id/'
 ]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
@@ -155,10 +159,10 @@ SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware', 
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -336,8 +340,6 @@ CACHE_TIMEOUT = 3600 * 24 * 2 # 2 days
 # CSRF settings
 CSRF_COOKIE_NAME = 'csrftoken'
 CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
-
-CSRF_TRUSTED_ORIGINS = ['https://cms-2sn7d.kinsta.app/', 'https://cms-2sn7d.kinsta.app/', 'https://*.kinsta.app','https://*.127.0.0.1', 'https://www.matanauniversity.ac.id/']
 
 ROOT_URLCONF = 'config.urls'
 

@@ -8,7 +8,7 @@ from rest_framework.routers import DefaultRouter
 from . import views
 from django.conf import settings
 from django.views.generic import TemplateView
-from config.media_views import protected_serve, FileUploadView, FileListView
+from config.media_views import protected_serve, FileUploadView, FileListView, FileDeleteView
 from config.db_backup_views import backup_database, list_database_backups
 
 
@@ -78,6 +78,7 @@ urlpatterns = [
     # Moved endpoints from main urls.py
     path('YXBpL3VwbG9hZC8/', FileUploadView.as_view(), name='file_upload'),
     path('YXBpL2ZpbGVzLw/', FileListView.as_view(), name='file_list'),
+    path('YXBpL2ZpbGVzLw/d/', FileDeleteView.as_view(), name='file_delete'),
     path('upVGVtcGxh/', TemplateView.as_view(template_name='upload_test.html'), name='test_upload'),
     path('updGVWaWV3/', TemplateView.as_view(template_name='login_upload.html'), name='login_upload'),
     path('YmFja3VwLWRiLw/', TemplateView.as_view(template_name='backup_db.html'), name='backup_db_page'),

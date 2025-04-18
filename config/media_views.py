@@ -12,6 +12,11 @@ import json
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.csrf import csrf_exempt
 import datetime
+from django.utils.decorators import method_decorator
+import re
+
+# Configuration toggle for removing file extensions
+REMOVE_FILE_EXTENSIONS = False
 
 # Import Python's magic module if available
 try:
@@ -19,13 +24,6 @@ try:
     MAGIC_AVAILABLE = True
 except ImportError:
     MAGIC_AVAILABLE = False
-
-
-from django.http import FileResponse, HttpResponseForbidden, JsonResponse, HttpResponse
-from django.conf import settings
-import os
-import mimetypes
-import re
 
 def protected_serve(request, path):
     """
@@ -115,6 +113,61 @@ def protected_serve(request, path):
     response['Content-Disposition'] = f'inline; filename="{os.path.basename(file_path)}"'
     return response
 
+@method_decorator(csrf_exempt, name='dispatch')
+class FileDeleteView(APIView):
+    """
+    API view for deleting uploaded files.
+    Only authenticated users can delete files.
+    Accepts JSON requests with 'filename' parameter.
+    """
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [SessionAuthentication, TokenAuthentication]
+    
+    def delete(self, request, format=None):
+        """
+        Delete a specific file specified in the JSON body
+        """
+        # Get filename from request data
+        try:
+            data = request.data
+            filename = data.get('filename')
+            
+            if not filename:
+                return Response(
+                    {'error': 'Filename is required in request body'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
+            # Validate filename to prevent directory traversal
+            if '..' in filename or filename.startswith('/'):
+                return Response(
+                    {'error': 'Invalid filename'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Construct file path
+            file_path = os.path.join(settings.MEDIA_ROOT, filename)
+            
+            # Check if file exists
+            if not os.path.exists(file_path) or not os.path.isfile(file_path):
+                return Response(
+                    {'error': 'File not found'}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Delete the file
+            os.remove(file_path)
+            return Response(
+                {'message': f'File {filename} deleted successfully'}, 
+                status=status.HTTP_200_OK
+            )
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to delete file: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 class FileUploadView(APIView):
     """
     API view untuk upload file.
@@ -137,8 +190,24 @@ class FileUploadView(APIView):
         if not file_obj:
             return Response({'error': 'No file found'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Simpan file dengan nama asli
-        file_path = os.path.join(settings.MEDIA_ROOT, file_obj.name)
+        # Get the original file name
+        original_filename = file_obj.name
+        
+        # If configured to remove extensions, strip the extension
+        if REMOVE_FILE_EXTENSIONS:
+            # Split the filename into base and extension
+            base_name, ext = os.path.splitext(original_filename)
+            # Use just the base name without extension
+            save_filename = base_name
+            # Keep original extension for content type detection
+            content_type, _ = mimetypes.guess_type(original_filename)
+        else:
+            # Use the original filename with extension
+            save_filename = original_filename
+            content_type = None
+        
+        # Simpan file dengan nama yang sudah dimodifikasi
+        file_path = os.path.join(settings.MEDIA_ROOT, save_filename)
         
         # Pastikan direktori ada
         os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
@@ -148,12 +217,13 @@ class FileUploadView(APIView):
             for chunk in file_obj.chunks():
                 destination.write(chunk)
         
-        # Return URL
-        file_url = f"{request.scheme}://{request.get_host()}/fjowejao/{file_obj.name}"
+        # Return URL with the new filename
+        file_url = f"{request.scheme}://{request.get_host()}/fjowejao/{save_filename}"
         
         return Response({
             'message': 'File uploaded successfully',
-            'file_name': file_obj.name,
+            'file_name': save_filename,
+            'original_name': original_filename,
             'url': file_url
         }, status=status.HTTP_201_CREATED)
 
@@ -198,7 +268,6 @@ class FileListView(APIView):
                     try:
                         mime = magic.Magic(mime=True)
                         content_type = mime.from_file(file_path)
-                        # print(file_path, "content_type :",content_type)
                     except Exception:
                         pass
                 
