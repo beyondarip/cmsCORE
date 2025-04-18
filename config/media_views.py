@@ -40,7 +40,7 @@ def protected_serve(request, path):
     Function-based view for serving protected media files.
     Video files are publicly accessible, other files require authentication.
     
-    Uses Django's built-in serve function for reliable file serving.
+    Supports HTTP Range requests for video seeking and position control.
     
     Args:
         request: HTTP request
@@ -53,14 +53,9 @@ def protected_serve(request, path):
     """
     logger = logging.getLogger('apps')
     logger.info(f"Media request: {path}")
-    
-    # Check if this is a video file (public access allowed)
-    # if is_video_file(path):
-    #     logger.info(f"Public access for video: {path}")
-    #     return serve(request, path, document_root=settings.MEDIA_ROOT)
-    
-    # For non-video files, check authentication
+
     if not request.user.is_authenticated:
+        # For non-video files, check authentication
         # Check for token in query param
         auth_token = request.GET.get('auth_token')
         if auth_token:
@@ -87,17 +82,83 @@ def protected_serve(request, path):
                 }, status=403)
             return render(request, '404.html', status=404)
     
-    # User is authenticated (either via session or token), serve the file
-    logger.info(f"Authenticated access for: {path}")
+    # User is authenticated or file is video, serve the file
+    file_path = os.path.join(settings.MEDIA_ROOT, path)
     
-    # Add cache headers
-    response = serve(request, path, document_root=settings.MEDIA_ROOT)
+    # Check if file exists
+    if not os.path.exists(file_path) or not os.path.isfile(file_path):
+        logger.warning(f"File not found: {file_path}")
+        if 'application/json' in request.META.get('HTTP_ACCEPT', ''):
+            return JsonResponse({
+                'error': 'Not Found', 
+                'message': 'File tidak ditemukan.'
+            }, status=404)
+        return render(request, '404.html', status=404)
     
-    # Set cache headers
-    if is_video_file(path):
-        response['Cache-Control'] = 'public, max-age=86400'  # 24 hours
+    # Get file size
+    file_size = os.path.getsize(file_path)
+    
+    # Get content type
+    content_type, encoding = mimetypes.guess_type(file_path)
+    if not content_type and MAGIC_AVAILABLE:
+        try:
+            mime = magic.Magic(mime=True)
+            content_type = mime.from_file(file_path)
+        except Exception as e:
+            logger.warning(f"Error determining content type: {str(e)}")
+    
+    content_type = content_type or 'application/octet-stream'
+    
+    # Check for Range header
+    range_header = request.META.get('HTTP_RANGE', '').strip()
+    range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
+    
+    if range_match:
+        # This is a range request (partial content)
+        start = int(range_match.group(1))
+        end = int(range_match.group(2)) if range_match.group(2) else file_size - 1
+        
+        # Make sure end doesn't exceed file size
+        end = min(end, file_size - 1)
+        
+        # Content length to send
+        content_length = end - start + 1
+        
+        logger.info(f"Range request: bytes {start}-{end}/{file_size}")
+        
+        # Open file and position at start byte
+        file_obj = open(file_path, 'rb')
+        file_obj.seek(start)
+        
+        # Create response with appropriate headers
+        response = FileResponse(file_obj, content_type=content_type, status=206)  # 206 Partial Content
+        response['Content-Length'] = str(content_length)
+        response['Content-Range'] = f'bytes {start}-{end}/{file_size}'
+        response['Accept-Ranges'] = 'bytes'
     else:
-        response['Cache-Control'] = 'public, max-age=3600'  # 1 hour
+        # This is a full content request
+        logger.info(f"Full file request: {path}")
+        
+        # For standard requests, we'll use Django's serve for non-video files
+        # but handle video files ourselves for better control
+        if not is_video_file(path) and not range_header:
+            # For non-video files without range, use Django's serve
+            response = serve(request, path, document_root=settings.MEDIA_ROOT)
+        else:
+            # For videos or explicit range requests, create our own response
+            response = FileResponse(open(file_path, 'rb'), content_type=content_type)
+            response['Content-Length'] = str(file_size)
+            response['Accept-Ranges'] = 'bytes'
+    
+    # Add cache control headers
+    if is_video_file(path):
+        response['Cache-Control'] = 'public, max-age=86400'  # 24 hours for videos
+    else:
+        response['Cache-Control'] = 'public, max-age=3600'   # 1 hour for other files
+    
+    # Set content disposition
+    filename = os.path.basename(file_path)
+    response['Content-Disposition'] = f'inline; filename="{filename}"'
     
     return response
 
