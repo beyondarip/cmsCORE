@@ -23,7 +23,7 @@ from django.views.static import serve
 
 
 from django.shortcuts import render
-from .views import page_not_found
+from .views import page_not_found, home_view
 from .media_views import protected_serve, FileUploadView, FileListView
 from .db_backup_views import backup_database, list_database_backups
 
@@ -38,7 +38,7 @@ urlpatterns = [
     re_path(r'^' + media_url_pattern + r'/(?P<path>.*)$', protected_serve, name='protected_media'),
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
     path('404/', page_not_found, name='404'),
-    path('', page_not_found, name='home'),
+    path('', home_view, name='home'),
     path(settings.SECRET_KEY_LOGIN+"_"+'admin/', admin.site.urls),
     path('da42FH0V5PGs7Hon1YTO/', include('apps.members.urls', namespace='members')),
     path('django_f', TemplateView.as_view(template_name='index.html'), name='django_f'),

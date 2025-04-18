@@ -15,3 +15,18 @@ def page_not_found(request, exception):
         HttpResponse with 404.html template and 404 status code
     """
     return render(request, '404.html', status=404)
+
+def home_view(request):
+    """
+    Home page view.
+    
+    This view is used for the root URL of the site.
+    It renders the 404.html template but with a 200 status code.
+    
+    Args:
+        request: The HTTP request object
+        
+    Returns:
+        HttpResponse with 404.html template and 200 status code
+    """
+    return render(request, '404.html', status=200)
