@@ -16,7 +16,7 @@ from django.utils.decorators import method_decorator
 import re
 
 # Configuration toggle for removing file extensions
-REMOVE_FILE_EXTENSIONS = False
+REMOVE_FILE_EXTENSIONS = True
 
 # Import Python's magic module if available
 try:
