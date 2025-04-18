@@ -11,6 +11,7 @@ import mimetypes
 import json
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.csrf import csrf_exempt
+import datetime
 
 
 def protected_serve(request, path):
@@ -52,13 +53,12 @@ def protected_serve(request, path):
         # Kembalikan halaman 404
         return render(request, '404.html', status=404)
     
-    # Dapatkan mimetype
+    # Kembalikan file
     content_type, encoding = mimetypes.guess_type(file_path)
-    if content_type is None:
-        content_type = 'application/octet-stream'
+    content_type = content_type or 'application/octet-stream'
     
-    # Return file response
     response = FileResponse(open(file_path, 'rb'), content_type=content_type)
+    response['Content-Disposition'] = f'inline; filename="{os.path.basename(file_path)}"'
     return response
 
 
@@ -102,4 +102,84 @@ class FileUploadView(APIView):
             'message': 'File uploaded successfully',
             'file_name': file_obj.name,
             'url': file_url
-        }, status=status.HTTP_201_CREATED) 
+        }, status=status.HTTP_201_CREATED)
+
+
+class FileListView(APIView):
+    """
+    API view untuk mendapatkan daftar semua file yang telah diunggah.
+    Hanya user yang sudah login yang bisa mengakses daftar file.
+    """
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [SessionAuthentication, TokenAuthentication]
+    
+    def get(self, request, format=None):
+        """
+        Return a list of all uploaded files
+        """
+        files = []
+        
+        # Pastikan MEDIA_ROOT ada
+        if not os.path.exists(settings.MEDIA_ROOT):
+            return Response(files, status=status.HTTP_200_OK)
+        
+        # Iterate through all files in MEDIA_ROOT
+        for root, dirs, filenames in os.walk(settings.MEDIA_ROOT):
+            for filename in filenames:
+                file_path = os.path.join(root, filename)
+                rel_path = os.path.relpath(file_path, settings.MEDIA_ROOT)
+                
+                # Get file stats
+                file_stat = os.stat(file_path)
+                size_bytes = file_stat.st_size
+                modified_time = datetime.datetime.fromtimestamp(file_stat.st_mtime)
+                
+                # Use a more compact date format (YYYY-MM-DD)
+                modified_date = modified_time.strftime("%Y-%m-%d")
+                
+                # Determine file type
+                content_type, _ = mimetypes.guess_type(file_path)
+                content_type = content_type or 'application/octet-stream'
+                
+                # Extract file type category from content_type
+                file_type = "other"
+                if content_type:
+                    if content_type.startswith('image/'):
+                        file_type = "image"
+                    elif content_type.startswith('video/'):
+                        file_type = "video"
+                    elif content_type.startswith('audio/'):
+                        file_type = "audio"
+                    elif (content_type.startswith('application/pdf') or
+                          content_type.startswith('application/msword') or
+                          'officedocument' in content_type):
+                        file_type = "document"
+                
+                # Get URL
+                file_url = f"{request.scheme}://{request.get_host()}/fjowejao/{rel_path}"
+                
+                # Add file info to list with more compact representation
+                files.append({
+                    'name': filename,
+                    'path': rel_path,
+                    'url': file_url,
+                    'size': self._format_file_size(size_bytes),
+                    'type': file_type,
+                    'modified': modified_date
+                })
+        
+        # Sort files by modified date (newest first)
+        files.sort(key=lambda x: x['modified'], reverse=True)
+        
+        return Response(files, status=status.HTTP_200_OK)
+    
+    def _format_file_size(self, size_bytes):
+        """Format file size in a human-readable format"""
+        if size_bytes < 1024:
+            return f"{size_bytes} B"
+        elif size_bytes < 1024 * 1024:
+            return f"{size_bytes / 1024:.1f} KB"
+        elif size_bytes < 1024 * 1024 * 1024:
+            return f"{size_bytes / (1024 * 1024):.1f} MB"
+        else:
+            return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB" 

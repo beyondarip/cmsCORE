@@ -7,6 +7,9 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 from django.conf import settings
+from django.views.generic import TemplateView
+from config.media_views import protected_serve, FileUploadView, FileListView
+from config.db_backup_views import backup_database, list_database_backups
 
 
 from django.urls import re_path
@@ -69,7 +72,15 @@ urlpatterns = [
     path('search/', views.SearchView.as_view(), name='search'),
     path('YmFzZTY0/', include('dj_rest_auth.urls')),    # Add the members API URLs
     path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-   path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-   path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-  
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    
+    # Moved endpoints from main urls.py
+    path('YXBpL3VwbG9hZC8/', FileUploadView.as_view(), name='file_upload'),
+    path('YXBpL2ZpbGVzLw/', FileListView.as_view(), name='file_list'),
+    path('upVGVtcGxh/', TemplateView.as_view(template_name='upload_test.html'), name='test_upload'),
+    path('updGVWaWV3/', TemplateView.as_view(template_name='login_upload.html'), name='login_upload'),
+    path('YmFja3VwLWRiLw/', TemplateView.as_view(template_name='backup_db.html'), name='backup_db_page'),
+    path('backup-db-file/', backup_database, name='backup_database'),
+    path('backup-db-list/', list_database_backups, name='list_database_backups'),
 ]

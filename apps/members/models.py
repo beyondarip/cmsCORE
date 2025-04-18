@@ -108,7 +108,7 @@ class Element(models.Model):
         
         return Element.objects.filter(id__in=relationship_ids)
     
-        # Add this to your Element model
+    # Add this to your Element model
     def remove_related_element(self, element_id, relationship_type=None):
         """Remove a relationship to another element"""
         if 'relationships' not in self.data:

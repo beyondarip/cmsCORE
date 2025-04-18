@@ -160,7 +160,8 @@ class ElementViewSet(viewsets.ModelViewSet):
                 {'error': 'Related element not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        @action(detail=True, methods=['post'])
+    
+    @action(detail=True, methods=['post'])
     def remove_related(self, request, pk=None):
         """Remove a related element"""
         element = self.get_object()
