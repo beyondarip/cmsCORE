@@ -53,7 +53,8 @@ def backup_database(request):
         
         # URL untuk mengakses file (full URL dengan scheme dan host)
         media_url = settings.MEDIA_URL.rstrip('/')
-        file_url = f"{request.scheme}://{request.get_host()}{media_url}/{filename}"
+        server_prefix = getattr(settings, 'SERVER_PREFIX', '')
+        file_url = f"{request.scheme}://{request.get_host()}{server_prefix}{media_url}/{filename}"
         
         # Kembalikan data sebagai JSON daripada redirect
         return JsonResponse({
@@ -98,7 +99,8 @@ def list_database_backups(request):
             filename = os.path.basename(file_path)
             # URL lengkap dengan scheme dan host
             media_url = settings.MEDIA_URL.rstrip('/')
-            file_url = f"{request.scheme}://{request.get_host()}{media_url}/{filename}"
+            server_prefix = getattr(settings, 'SERVER_PREFIX', '')
+            file_url = f"{request.scheme}://{request.get_host()}{server_prefix}{media_url}/{filename}"
             file_size = os.path.getsize(file_path) / (1024 * 1024)  # Size in MB
             
             backups.append({

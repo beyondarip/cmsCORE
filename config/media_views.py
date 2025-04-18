@@ -372,9 +372,14 @@ class FileUploadView(APIView):
                 logger.error(f"Error writing file: {str(e)}")
                 raise
             
-            # Return URL with the new filename - Using Django's settings instead of hardcoding
+            # Get the base URL and server prefix for full URL construction
+            base_url = f"{request.scheme}://{request.get_host()}"
+            server_prefix = getattr(settings, 'SERVER_PREFIX', '')  # Get from settings with fallback
             media_url = settings.MEDIA_URL.rstrip('/')
-            file_url = f"{request.scheme}://{request.get_host()}{media_url}/{unique_filename}"
+            
+            # Construct the complete URL with all required path components
+            file_url = f"{base_url}{server_prefix}{media_url}/{unique_filename}"
+            logger.info(f"Generated file URL: {file_url}")
             
             # Ensure the file exists before returning success
             if not os.path.exists(file_path):
@@ -424,6 +429,7 @@ class FileListView(APIView):
         Return a list of all uploaded files
         """
         files = []
+        logger = logging.getLogger('apps')
         
         # Pastikan MEDIA_ROOT ada
         if not os.path.exists(settings.MEDIA_ROOT):
@@ -470,10 +476,19 @@ class FileListView(APIView):
                           'officedocument' in content_type):
                         file_type = "document"
                 
-                # Get URL using Django's settings
+                # Get the correct complete URL with full path
+                base_url = f"{request.scheme}://{request.get_host()}"
+                
+                # Add the full path including server/2/fjoejoj prefix
+                # This ensures the complete path is included in the URL
+                server_prefix = getattr(settings, 'SERVER_PREFIX', '')  # Get from settings with fallback
                 media_url = settings.MEDIA_URL.rstrip('/')
-                file_url = f"{request.scheme}://{request.get_host()}{media_url}/{rel_path}"
-                print(file_url)
+                
+                # Construct the full URL with all path components
+                file_url = f"{base_url}{server_prefix}{media_url}/{rel_path}"
+                
+                logger.info(f"Generated file URL: {file_url}")
+                
                 # Add file info to list with more compact representation
                 files.append({
                     'name': filename,
