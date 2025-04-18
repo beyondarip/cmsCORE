@@ -7,8 +7,6 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 from rest_framework.authtoken.models import Token
-from django.views.static import serve
-from django.conf.urls.static import static
 import os
 import mimetypes
 import json
@@ -110,25 +108,58 @@ def protected_serve(request, path):
     
     # For media files (video/audio): Use Django's static approach for full playback
     if is_media:
-        logger.info(f"Serving media file with static approach: {path}")
+        logger.info(f"Serving media file using FileResponse: {path}")
         
-        # Get Django's native static handler (this is what static() URL helper uses)
-        handler, args, kwargs = static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)[0]
+        # Open the file in binary mode
+        file_handle = open(file_path, 'rb')
         
-        # Use the same view function that Django's urlpatterns += static() would use
-        return handler(request, path, **kwargs)
-    
-    # For authenticated users accessing non-media files, use regular serve
-    try:
-        logger.info(f"Serving protected file: {path}")
-        response = serve(request, path, document_root=settings.MEDIA_ROOT)
+        # Get the content type based on file extension
+        content_type, encoding = mimetypes.guess_type(file_path)
+        if not content_type:
+            content_type = 'application/octet-stream'
         
-        # Add cache headers for better performance
-        response['Cache-Control'] = 'public, max-age=3600'  # 1 hour for non-media files
+        # Create FileResponse that handles range requests
+        response = FileResponse(file_handle, content_type=content_type)
         
-        # Set content disposition
+        # Set the filename and content-disposition
         filename = os.path.basename(file_path)
         response['Content-Disposition'] = f'inline; filename="{filename}"'
+        
+        # Add cache headers suitable for media files
+        response['Cache-Control'] = 'public, max-age=43200'  # 12 hours for media
+        
+        # Get file size for Content-Length header
+        response['Content-Length'] = os.path.getsize(file_path)
+        
+        # Support for range requests (important for video playback)
+        response['Accept-Ranges'] = 'bytes'
+        
+        return response
+    
+    # For authenticated users accessing non-media files, use FileResponse
+    try:
+        logger.info(f"Serving protected non-media file: {path}")
+        
+        # Open the file in binary mode
+        file_handle = open(file_path, 'rb')
+        
+        # Get the content type based on file extension
+        content_type, encoding = mimetypes.guess_type(file_path)
+        if not content_type:
+            content_type = 'application/octet-stream'
+            
+        # Create FileResponse
+        response = FileResponse(file_handle, content_type=content_type)
+        
+        # Set the filename and content disposition
+        filename = os.path.basename(file_path)
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        
+        # Add cache headers
+        response['Cache-Control'] = 'public, max-age=3600'  # 1 hour for non-media files
+        
+        # Set Content-Length header
+        response['Content-Length'] = os.path.getsize(file_path)
         
         return response
         
