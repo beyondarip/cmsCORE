@@ -98,52 +98,76 @@ def protected_serve(request, path):
     # Check if this is a media file (video/audio)
     is_media = is_media_file(path)
     
+    # Convert MEDIA_ROOT to string for path operations
+    media_root_str = str(settings.MEDIA_ROOT)
+    
     # File path for checking existence
-    file_path = os.path.join(settings.MEDIA_ROOT, path)
+    file_path = os.path.join(media_root_str, path)
     
-    # Check if file exists
-    if not os.path.exists(file_path) or not os.path.isfile(file_path):
-        logger.warning(f"File not found: {file_path}")
-        if 'application/json' in request.META.get('HTTP_ACCEPT', ''):
-            return JsonResponse({
-                'error': 'Not Found', 
-                'message': 'File tidak ditemukan.'
-            }, status=404)
-        return render(request, '404.html', status=404)
+    # Handle potential Unicode path issues
+    try:
+        # Check if file exists using encoded path
+        if not os.path.exists(file_path) or not os.path.isfile(file_path):
+            logger.warning(f"File not found: {file_path}")
+            if 'application/json' in request.META.get('HTTP_ACCEPT', ''):
+                return JsonResponse({
+                    'error': 'Not Found', 
+                    'message': 'File tidak ditemukan.'
+                }, status=404)
+            return render(request, '404.html', status=404)
+    except UnicodeEncodeError:
+        logger.error("Unicode encoding error when checking file path")
+        return JsonResponse({
+            'error': 'Path Error', 
+            'message': 'Invalid file path encoding.'
+        }, status=400)
     
-    # For media files (video/audio): Use Django's static approach for full playback
+    # For media files (video/audio): Use FileResponse
     if is_media:
-        logger.info(f"Serving media file using FileResponse: {path}")
-        
-        # Open the file in binary mode
-        file_handle = open(file_path, 'rb')
-        
-        # Get the content type based on file extension
-        content_type, encoding = mimetypes.guess_type(file_path)
-        if not content_type:
-            content_type = 'application/octet-stream'
-        
-        # Create FileResponse that handles range requests
-        response = FileResponse(file_handle, content_type=content_type)
-        
-        # Set the filename and content-disposition
-        filename = os.path.basename(file_path)
-        response['Content-Disposition'] = f'inline; filename="{filename}"'
-        
-        # Add cache headers suitable for media files
-        response['Cache-Control'] = 'public, max-age=43200'  # 12 hours for media
-        
-        # Get file size for Content-Length header
-        response['Content-Length'] = os.path.getsize(file_path)
-        
-        # Support for range requests (important for video playback)
-        response['Accept-Ranges'] = 'bytes'
-        
-        return response
+        try:
+            logger.info(f"Serving media file using FileResponse")
+            
+            # Open the file in binary mode
+            file_handle = open(file_path, 'rb')
+            
+            # Get the content type based on file extension
+            content_type, encoding = mimetypes.guess_type(file_path)
+            if not content_type:
+                content_type = 'application/octet-stream'
+            
+            # Create FileResponse that handles range requests
+            response = FileResponse(file_handle, content_type=content_type)
+            
+            # Set the filename and content-disposition
+            filename = os.path.basename(file_path)
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+            
+            # Add cache headers suitable for media files
+            response['Cache-Control'] = 'public, max-age=43200'  # 12 hours for media
+            
+            # Get file size for Content-Length header
+            response['Content-Length'] = os.path.getsize(file_path)
+            
+            # Support for range requests (important for video playback)
+            response['Accept-Ranges'] = 'bytes'
+            
+            return response
+        except UnicodeEncodeError as e:
+            logger.error(f"Unicode error when serving media file: {str(e)}", exc_info=True)
+            return JsonResponse({
+                'error': 'Encoding Error',
+                'message': 'The filename contains unsupported characters.'
+            }, status=400)
+        except Exception as e:
+            logger.error(f"Error serving media file: {str(e)}", exc_info=True)
+            return JsonResponse({
+                'error': 'Error serving file',
+                'detail': str(e) if settings.DEBUG else 'Contact administrator for details'
+            }, status=500)
     
     # For authenticated users accessing non-media files, use FileResponse
     try:
-        logger.info(f"Serving protected non-media file: {path}")
+        logger.info(f"Serving protected non-media file")
         
         # Open the file in binary mode
         file_handle = open(file_path, 'rb')
@@ -168,8 +192,14 @@ def protected_serve(request, path):
         
         return response
         
+    except UnicodeEncodeError as e:
+        logger.error(f"Unicode error when serving file: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'error': 'Encoding Error',
+            'message': 'The filename contains unsupported characters.'
+        }, status=400)
     except Exception as e:
-        logger.error(f"Error serving file {path}: {str(e)}", exc_info=True)
+        logger.error(f"Error serving file: {str(e)}", exc_info=True)
         return JsonResponse({
             'error': 'Error serving file',
             'detail': str(e) if settings.DEBUG else 'Contact administrator for details'
@@ -259,7 +289,7 @@ class FileUploadView(APIView):
             # Log file information for debugging
             logger.info(f"Uploading file: {file_obj.name}, Size: {file_obj.size} bytes, Content-Type: {file_obj.content_type}")
             
-            # Get the original file name
+            # Get the original file name - ensure it's treated as UTF-8
             original_filename = file_obj.name
             
             # Only sanitize characters that are invalid for Linux filesystems
@@ -315,22 +345,25 @@ class FileUploadView(APIView):
                 unique_filename = sanitized_name
                 content_type = file_obj.content_type or None
             
+            # Convert MEDIA_ROOT to string to ensure it's properly handled
+            media_root_str = str(settings.MEDIA_ROOT)
+            
             # Handle filename conflicts by adding a number suffix if file already exists
-            file_path = os.path.join(settings.MEDIA_ROOT, unique_filename)
+            file_path = os.path.join(media_root_str, unique_filename)
             counter = 1
             
             # If file already exists, add a numeric suffix to avoid overwriting
             name_base, ext = os.path.splitext(unique_filename)
             while os.path.exists(file_path):
                 unique_filename = f"{name_base}_{counter}{ext}"
-                file_path = os.path.join(settings.MEDIA_ROOT, unique_filename)
+                file_path = os.path.join(media_root_str, unique_filename)
                 counter += 1
                 
             # Ensure the filename doesn't exceed filesystem limits (typically 255 chars)
             if len(unique_filename) > 200:  # Being more conservative
                 unique_filename = unique_filename[:200]
             
-            # Log the processed filename
+            # Log the processed filename - need to be careful with Unicode logging
             logger.info(f"Final filename: {unique_filename}")
             
             # Try to determine if we need special handling for video files
@@ -340,10 +373,14 @@ class FileUploadView(APIView):
                 logger.info(f"Handling video file: {file_obj.content_type}")
             
             # Ensure directory exists with proper encoding support
-            os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
+            os.makedirs(media_root_str, exist_ok=True)
             
-            # Log path before writing
-            logger.info(f"Attempting to write file to: {file_path}")
+            # Log path before writing - be careful with Unicode logging
+            try:
+                logger.info(f"Attempting to write file to: {file_path}")
+            except UnicodeEncodeError:
+                # Fallback for logging if there's an encoding issue
+                logger.info(f"Attempting to write file to path with non-ASCII characters (cannot display in log)")
             
             # Tulis file with chunking to handle large files better
             try:
@@ -352,7 +389,7 @@ class FileUploadView(APIView):
                     for chunk in file_obj.chunks(chunk_size=1024 * 1024):  # 1MB chunks
                         destination.write(chunk)
                         
-                logger.info(f"File successfully written to {file_path}")
+                logger.info(f"File successfully written")
             except Exception as e:
                 logger.error(f"Error writing file: {str(e)}", exc_info=True)
                 raise
@@ -363,7 +400,15 @@ class FileUploadView(APIView):
             media_url = settings.MEDIA_URL.rstrip('/')
             
             # URL encode the filename to handle spaces and special characters
-            encoded_filename = urllib.parse.quote(unique_filename)
+            try:
+                encoded_filename = urllib.parse.quote(unique_filename)
+            except UnicodeEncodeError:
+                # If we can't encode it properly, use a simpler filename for the URL
+                logger.warning("Could not URL-encode the Unicode filename, using simplified version")
+                # Generate a simple hexadecimal representation of the filename
+                import binascii
+                encoded_filename = binascii.hexlify(unique_filename.encode('utf-8', errors='replace')).decode('ascii')
+                encoded_filename = f"file_{encoded_filename}"
             
             # Construct the complete URL with all required path components
             file_url = f"{base_url}{server_prefix}{media_url}/{encoded_filename}"
@@ -371,7 +416,7 @@ class FileUploadView(APIView):
             
             # Ensure the file exists before returning success
             if not os.path.exists(file_path):
-                logger.error(f"File was not successfully saved: {file_path}")
+                logger.error(f"File was not successfully saved")
                 return Response({
                     'error': 'Failed to save file'
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -411,77 +456,93 @@ class FileListView(APIView):
         files = []
         logger = logging.getLogger('apps')
         
+        # Convert MEDIA_ROOT to string for path operations
+        media_root_str = str(settings.MEDIA_ROOT)
+        
         # Pastikan MEDIA_ROOT ada
-        if not os.path.exists(settings.MEDIA_ROOT):
+        if not os.path.exists(media_root_str):
             return Response(files, status=status.HTTP_200_OK)
         
         # Iterate through all files in MEDIA_ROOT
-        for root, dirs, filenames in os.walk(settings.MEDIA_ROOT):
+        for root, dirs, filenames in os.walk(media_root_str):
             for filename in filenames:
-                file_path = os.path.join(root, filename)
-                rel_path = os.path.relpath(file_path, settings.MEDIA_ROOT)
-                
-                # Get file stats
-                file_stat = os.stat(file_path)
-                size_bytes = file_stat.st_size
-                modified_time = datetime.datetime.fromtimestamp(file_stat.st_mtime)
-                
-                # Use a more compact date format (YYYY-MM-DD)
-                modified_date = modified_time.strftime("%Y-%m-%d")
-                
-                # Determine file type
-                content_type, _ = mimetypes.guess_type(file_path)
-                
-                # If content_type is not determined by extension, try using magic module
-                if not content_type and MAGIC_AVAILABLE:
+                try:
+                    file_path = os.path.join(root, filename)
+                    rel_path = os.path.relpath(file_path, media_root_str)
+                    
+                    # Get file stats
+                    file_stat = os.stat(file_path)
+                    size_bytes = file_stat.st_size
+                    modified_time = datetime.datetime.fromtimestamp(file_stat.st_mtime)
+                    
+                    # Use a more compact date format (YYYY-MM-DD)
+                    modified_date = modified_time.strftime("%Y-%m-%d")
+                    
+                    # Determine file type
+                    content_type, _ = mimetypes.guess_type(file_path)
+                    
+                    # If content_type is not determined by extension, try using magic module
+                    if not content_type and MAGIC_AVAILABLE:
+                        try:
+                            mime = magic.Magic(mime=True)
+                            content_type = mime.from_file(file_path)
+                        except Exception:
+                            pass
+                    
+                    content_type = content_type or 'application/octet-stream'
+                    
+                    # Extract file type category from content_type
+                    file_type = "other"
+                    if content_type:
+                        if content_type.startswith('image/'):
+                            file_type = "image"
+                        elif content_type.startswith('video/'):
+                            file_type = "video"
+                        elif content_type.startswith('audio/'):
+                            file_type = "audio"
+                        elif (content_type.startswith('application/pdf') or
+                              content_type.startswith('application/msword') or
+                              'officedocument' in content_type):
+                            file_type = "document"
+                    
+                    # Get the correct complete URL with full path
+                    base_url = f"{request.scheme}://{request.get_host()}"
+                    
+                    # Add the full path including server/2/fjoejoj prefix
+                    # This ensures the complete path is included in the URL
+                    server_prefix = getattr(settings, 'SERVER_PREFIX', '')  # Get from settings with fallback
+                    media_url = settings.MEDIA_URL.rstrip('/')
+                    
+                    # URL encode the path to handle spaces and special characters
                     try:
-                        mime = magic.Magic(mime=True)
-                        content_type = mime.from_file(file_path)
-                    except Exception:
-                        pass
-                
-                content_type = content_type or 'application/octet-stream'
-                
-                # Extract file type category from content_type
-                file_type = "other"
-                if content_type:
-                    if content_type.startswith('image/'):
-                        file_type = "image"
-                    elif content_type.startswith('video/'):
-                        file_type = "video"
-                    elif content_type.startswith('audio/'):
-                        file_type = "audio"
-                    elif (content_type.startswith('application/pdf') or
-                          content_type.startswith('application/msword') or
-                          'officedocument' in content_type):
-                        file_type = "document"
-                
-                # Get the correct complete URL with full path
-                base_url = f"{request.scheme}://{request.get_host()}"
-                
-                # Add the full path including server/2/fjoejoj prefix
-                # This ensures the complete path is included in the URL
-                server_prefix = getattr(settings, 'SERVER_PREFIX', '')  # Get from settings with fallback
-                media_url = settings.MEDIA_URL.rstrip('/')
-                
-                # URL encode the path to handle spaces and special characters
-                encoded_path = urllib.parse.quote(rel_path)
-                
-                # Construct the full URL with all path components
-                file_url = f"{base_url}{server_prefix}{media_url}/{encoded_path}"
-                
-                logger.info(f"Generated file URL: {file_url}")
-                
-                # Add file info to list with more compact representation
-                files.append({
-                    'name': filename,
-                    'path': rel_path,
-                    'url': file_url,
-                    'size': self._format_file_size(size_bytes),
-                    'type': file_type,
-                    'content_type': content_type,  # Include actual content type for debugging
-                    'modified': modified_date
-                })
+                        encoded_path = urllib.parse.quote(rel_path)
+                    except UnicodeEncodeError:
+                        # If we can't encode it properly, use a simpler filename for the URL
+                        logger.warning("Could not URL-encode the Unicode filename, using simplified version")
+                        # Generate a simple hexadecimal representation of the filename
+                        import binascii
+                        encoded_path = binascii.hexlify(rel_path.encode('utf-8', errors='replace')).decode('ascii')
+                        encoded_path = f"file_{encoded_path}"
+                    
+                    # Construct the full URL with all path components
+                    file_url = f"{base_url}{server_prefix}{media_url}/{encoded_path}"
+                    
+                    # Add file info to list with more compact representation
+                    files.append({
+                        'name': filename,
+                        'path': rel_path,
+                        'url': file_url,
+                        'size': self._format_file_size(size_bytes),
+                        'type': file_type,
+                        'content_type': content_type,  # Include actual content type for debugging
+                        'modified': modified_date
+                    })
+                except UnicodeEncodeError:
+                    # Skip files with encoding issues but log them
+                    logger.warning(f"Skipped file with Unicode encoding issues")
+                except Exception as e:
+                    # Skip any problematic files but log the error
+                    logger.error(f"Error processing file in directory listing: {str(e)}", exc_info=True)
         
         # Sort files by modified date (newest first)
         files.sort(key=lambda x: x['modified'], reverse=True)
