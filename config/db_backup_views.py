@@ -12,7 +12,7 @@ from django.shortcuts import redirect
 
 logger = logging.getLogger(__name__)
 
-@login_required
+# @login_required
 def backup_database(request):
     """
     View untuk backup database SQLite dan menyimpannya di MEDIA_ROOT.
@@ -51,8 +51,8 @@ def backup_database(request):
         shutil.copy2(db_path, media_path)
         logger.info(f"Database backup created at {media_path}")
         
-        # URL untuk mengakses file
-        file_url = f"/fjowejao/{filename}"
+        # URL untuk mengakses file (full URL dengan scheme dan host)
+        file_url = f"{request.scheme}://{request.get_host()}/fjowejao/{filename}"
         
         # Kembalikan data sebagai JSON daripada redirect
         return JsonResponse({
@@ -95,7 +95,8 @@ def list_database_backups(request):
         backups = []
         for file_path in backup_files:
             filename = os.path.basename(file_path)
-            file_url = f"/fjowejao/{filename}"
+            # URL lengkap dengan scheme dan host
+            file_url = f"{request.scheme}://{request.get_host()}/fjowejao/{filename}"
             file_size = os.path.getsize(file_path) / (1024 * 1024)  # Size in MB
             
             backups.append({

@@ -92,14 +92,14 @@
 
     <script>
         // Check login status
-        fetch('/YXBpL3VwbG9hZC8/', {
+        fetch('/da42FH0V5PGs7Hon1YTO/YXBpL3VwbG9hZC/', {
             method: 'HEAD',
             credentials: 'same-origin'
         })
         .then(response => {
             if (response.status === 403) {
                 // User belum login, redirect ke halaman login
-                window.location.href = '/updGVWaWV3/';
+                window.location.href = '/da42FH0V5PGs7Hon1YTO/updGVWaWV3/';
             } else {
                 // User sudah login, sembunyikan peringatan
                 document.getElementById('loginWarning').style.display = 'none';
@@ -139,7 +139,7 @@
             // Get CSRF token
             const csrftoken = getCookie('csrftoken');
             
-            fetch('/YXBpL3VwbG9hZC8/', {
+            fetch('/da42FH0V5PGs7Hon1YTO/YXBpL3VwbG9hZC/', {
                 method: 'POST',
                 body: formData,
                 credentials: 'same-origin',  // Include cookies
