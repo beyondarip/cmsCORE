@@ -257,18 +257,19 @@ class FileUploadView(APIView):
             # Get the original file name
             original_filename = file_obj.name
             
-            # Stronger filename sanitization to remove ALL non-ASCII characters
-            # This is more aggressive but prevents encoding issues
+            # Only sanitize characters that are invalid for Linux filesystems
+            # This preserves Unicode characters like Chinese, Korean, etc.
+            # First replace control characters and filesystem-unsafe characters
+            invalid_chars = r'[/\x00\\\*\?\[\]\(\)\;\&\|\<\>\$\`\'\":=]'
+            sanitized_name = re.sub(invalid_chars, '_', original_filename)
             
-            # First normalize unicode characters where possible
-            normalized = unicodedata.normalize('NFKD', original_filename)
-            # Strip accents and convert to ASCII, ignoring errors
-            ascii_name = normalized.encode('ascii', 'ignore').decode('ascii')
-            # Replace any remaining problematic characters with underscores
-            sanitized_name = re.sub(r'[^a-zA-Z0-9._-]', '_', ascii_name)
+            # Replace consecutive underscores with a single one
+            sanitized_name = re.sub(r'_+', '_', sanitized_name)
             
-            # If empty after sanitization (e.g., all characters were non-ASCII)
-            # generate a default name based on content type
+            # Remove leading/trailing whitespace and periods
+            sanitized_name = sanitized_name.strip(' .')
+            
+            # If empty after sanitization, generate a default name
             if not sanitized_name or sanitized_name == '_':
                 content_type = file_obj.content_type or 'application/octet-stream'
                 if content_type.startswith('image/'):
@@ -282,8 +283,22 @@ class FileUploadView(APIView):
             
             logger.info(f"Sanitized name: {sanitized_name}")
             
+            # Check if query parameter overrides default behavior
+            # 'keep_extension=true' means don't remove the extension (override REMOVE_FILE_EXTENSIONS=True)
+            # 'keep_extension=false' means remove the extension (override REMOVE_FILE_EXTENSIONS=False)
+            keep_extension_param = request.query_params.get('keep_extension', None)
+            
+            # Determine whether to remove extensions based on parameter or default setting
+            remove_extensions = REMOVE_FILE_EXTENSIONS  # Default from settings
+            
+            if keep_extension_param is not None:
+                # Override based on query parameter
+                keep_extension = keep_extension_param.lower() in ('true', 't', 'yes', 'y', '1')
+                remove_extensions = not keep_extension
+                logger.info(f"Extension removal overridden by query parameter: remove_extensions={remove_extensions}")
+            
             # If configured to remove extensions, strip the extension
-            if REMOVE_FILE_EXTENSIONS:
+            if remove_extensions:
                 # Split the filename into base and extension
                 base_name, ext = os.path.splitext(sanitized_name)
                 # Use just the base name without extension
