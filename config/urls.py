@@ -33,7 +33,6 @@ def test_404(request):
 
 urlpatterns = [
     re_path(r'^fjowejao/(?P<path>.*)$', protected_serve, name='protected_media'),
-    static("media/", document_root=settings.MEDIA_ROOT),
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
     path('404/', page_not_found, name='404'),
     path('', home_view, name='home'),
