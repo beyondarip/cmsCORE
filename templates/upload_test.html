@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Upload File</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            display: none;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .error-box {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .login-warning {
+            background-color: #fff3e0;
+            color: #e65100;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Upload File Test</h1>
+        <img src="http://localhost:8000/fjowejao/ejpnq_5c" alt="Logo" style="width: 100px; height: 100px;">
+        <br>
+        <video src="http://localhost:8000/fjowejao/DISH__ (北村匠海) - 猫 _ THE FIRST TAKE" controls style="max-width: 60%;"></video>
+        <!-- Login status warning -->
+        <div class="login-warning" id="loginWarning">
+            <strong>Peringatan:</strong> Anda harus login untuk menggunakan fitur upload file ini.
+            Pastikan sudah login di sistem sebelum melakukan upload.
+        </div>
+        
+        <p>Gunakan form ini untuk menguji upload file ke server.</p>
+        
+        <div class="form-group">
+            <label for="file">Pilih File:</label>
+            <input type="file" id="file" name="file">
+        </div>
+        
+        <button onclick="uploadFile()">Upload</button>
+        
+        <div id="result" class="result">
+            <h3>Hasil Upload:</h3>
+            <pre id="response"></pre>
+            <div id="preview"></div>
+        </div>
+    </div>
+
+    <script>
+        // Check login status
+        fetch('/YXBpL3VwbG9hZC8/', {
+            method: 'HEAD',
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (response.status === 403) {
+                // User belum login, redirect ke halaman login
+                window.location.href = '/updGVWaWV3/';
+            } else {
+                // User sudah login, sembunyikan peringatan
+                document.getElementById('loginWarning').style.display = 'none';
+            }
+        });
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        function uploadFile() {
+            const fileInput = document.getElementById('file');
+            const resultDiv = document.getElementById('result');
+            const responseDiv = document.getElementById('response');
+            const previewDiv = document.getElementById('preview');
+            
+            if (!fileInput.files.length) {
+                alert('Silakan pilih file terlebih dahulu');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            // Get CSRF token
+            const csrftoken = getCookie('csrftoken');
+            
+            fetch('/YXBpL3VwbG9hZC8/', {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin',  // Include cookies
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                },
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        throw new Error('Akses ditolak. Pastikan Anda sudah login terlebih dahulu.');
+                    } else {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                }
+                return response.json();
+            })
+            .then(data => {
+                resultDiv.style.display = 'block';
+                responseDiv.textContent = JSON.stringify(data, null, 2);
+                
+                // Jika file adalah gambar, tampilkan preview
+                if (fileInput.files[0].type.startsWith('image/')) {
+                    previewDiv.innerHTML = `<h3>Preview:</h3><img src="${data.url}" style="max-width: 100%;">`;
+                } else if (fileInput.files[0].type.startsWith('video/')) {
+                    previewDiv.innerHTML = `<h3>Preview:</h3><video src="${data.url}" controls style="max-width: 100%;"></video>`;
+                } else if (fileInput.files[0].type === 'application/pdf') {
+                    previewDiv.innerHTML = `<h3>Preview:</h3><embed src="${data.url}" type="application/pdf" width="100%" height="500px" />`;
+                } else {
+                    previewDiv.innerHTML = `<h3>File berhasil diupload:</h3><a href="${data.url}" target="_blank">Lihat file</a>`;
+                }
+            })
+            .catch(error => {
+                resultDiv.style.display = 'block';
+                responseDiv.innerHTML = `<div class="error-box">${error.message}</div>`;
+                previewDiv.innerHTML = '';
+            });
+        }
+    </script>
+</body>
+</html> 

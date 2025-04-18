@@ -108,6 +108,19 @@ class Element(models.Model):
         
         return Element.objects.filter(id__in=relationship_ids)
     
+        # Add this to your Element model
+    def remove_related_element(self, element_id, relationship_type=None):
+        """Remove a relationship to another element"""
+        if 'relationships' not in self.data:
+            return
+        
+        # Filter relationships to keep
+        self.data['relationships'] = [
+            rel for rel in self.data['relationships'] 
+            if rel['element_id'] != str(element_id) and 
+            (relationship_type is None or rel['type'] != relationship_type)
+        ]
+        self.save()
 
 class StudySession(models.Model):
     """Track study sessions for analytics"""

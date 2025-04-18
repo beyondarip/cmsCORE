@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Halaman Tidak Ditemukan | Matana University</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header {
+            padding: 20px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .logo {
+            max-width: 150px;
+            margin-bottom: 15px;
+        }
+        
+        .error-code {
+            font-size: 180px;
+            font-weight: bold;
+            color: rgba(0, 0, 0, 0.1);
+            margin: 30px 0;
+            user-select: none;
+        }
+        
+        .error-code span {
+            cursor: pointer;
+        }
+        
+        .error-title {
+            font-size: 32px;
+            color: #102048;
+            margin-bottom: 20px;
+        }
+        
+        .error-message {
+            font-size: 16px;
+            color: #6c757d;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+        
+        .search-form {
+            margin: 30px auto;
+            max-width: 500px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 30px;
+            outline: none;
+        }
+        
+        .footer-nav {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #102048;
+        }
+        
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        /* Login form styles */
+        .login-container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: none; /* Hidden by default */
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .error-message {
+            color: #f44336;
+            margin-top: 10px;
+        }
+        
+        .success-message {
+            color: #4CAF50;
+            margin-top: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .error-code {
+                font-size: 120px;
+            }
+            
+            .error-title {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="/static/images/logo.png" alt="Matana University Logo" class="logo">
+        </div>
+        <div class="error-code">
+            <span id="digit1" style="cursor: default">4</span><span id="digit2" style="cursor: default">0</span><span id="digit3" style="cursor: default">4</span>
+        </div>
+        
+        <h1 class="error-title">Oops! Halaman Tidak Ditemukan</h1>
+        
+        <p class="error-message">
+            Maaf, halaman yang Anda cari tidak dapat ditemukan. Silakan gunakan 
+            pencarian atau kunjungi halaman populer di bawah ini.
+        </p>
+        
+        <form class="search-form" action="/search/" method="GET">
+            <input type="text" name="q" class="search-input" placeholder="Cari halaman..." aria-label="Search">
+        </form>
+        
+        <div class="footer-nav">
+            <a href="/" class="nav-item">
+                <div class="nav-icon">🏠</div>
+                <span>Beranda</span>
+            </a>
+            
+            <a href="/pendaftaran" class="nav-item">
+                <div class="nav-icon">📝</div>
+                <span>Pendaftaran</span>
+            </a>
+            
+            <a href="/kontak" class="nav-item">
+                <div class="nav-icon">✉️</div>
+                <span>Kontak</span>
+            </a>
+        </div>
+        
+        <!-- Hidden login form -->
+        <div id="loginForm" class="login-container">
+            <h2>Login untuk Upload File</h2>
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button onclick="attemptLogin()">Login</button>
+            
+            <div id="message" class="error-message" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Secret sequence tracker
+        let fourClicks = 0;
+        let zeroClicks = 0;
+        let sequenceComplete = false;
+        
+        // Add click listeners for digits
+        document.getElementById('digit1').addEventListener('click', function() {
+            if (!sequenceComplete) {
+                fourClicks++;
+                if (fourClicks === 2 && zeroClicks === 3) {
+                    checkSequence();
+                }
+            }
+        });
+        
+        document.getElementById('digit3').addEventListener('click', function() {
+            if (!sequenceComplete) {
+                fourClicks++;
+                if (fourClicks === 2 && zeroClicks === 3) {
+                    checkSequence();
+                }
+            }
+        });
+        
+        document.getElementById('digit2').addEventListener('click', function() {
+            if (!sequenceComplete) {
+                zeroClicks++;
+                if (fourClicks === 2 && zeroClicks === 3) {
+                    checkSequence();
+                }
+            }
+        });
+        
+        function checkSequence() {
+            sequenceComplete = true;
+            
+            setTimeout(function() {
+                const secretCode = prompt("Enter secret code:");
+                if (secretCode === "MYPASSWORD") {
+                    // Show login form
+                    document.querySelector('.error-code').style.display = 'none';
+                    document.querySelector('.error-title').style.display = 'none';
+                    document.querySelector('.error-message').style.display = 'none';
+                    document.querySelector('.search-form').style.display = 'none';
+                    document.querySelector('.footer-nav').style.display = 'none';
+                    
+                    // Show the login form
+                    document.getElementById('loginForm').style.display = 'block';
+                } else {
+                    // Reset sequence if wrong code
+                    sequenceComplete = false;
+                    fourClicks = 0;
+                    zeroClicks = 0;
+                }
+            }, 100);
+        }
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        function attemptLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const messageDiv = document.getElementById('message');
+            
+            if (!username || !password) {
+                messageDiv.textContent = 'Silakan masukkan username dan password';
+                messageDiv.style.display = 'block';
+                return;
+            }
+            
+            const csrftoken = getCookie('csrftoken');
+            
+            fetch('/da42FH0V5PGs7Hon1YTO/YmFzZTY0/login/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                }),
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 400) {
+                        return response.json().then(data => {
+                            throw new Error(data.non_field_errors || 'Username atau password salah');
+                        });
+                    }
+                    throw new Error('Login gagal');
+                }
+                return response.json();
+            })
+            .then(data => {
+                messageDiv.textContent = 'Login berhasil! Mengalihkan ke halaman upload...';
+                messageDiv.className = 'success-message';
+                messageDiv.style.display = 'block';
+                
+                // Redirect ke halaman upload setelah 1 detik
+                setTimeout(() => {
+                    window.location.href = '/upVGVtcGxh/';
+                }, 1000);
+            })
+            .catch(error => {
+                messageDiv.textContent = error.message;
+                messageDiv.className = 'error-message';
+                messageDiv.style.display = 'block';
+            });
+        }
+        
+        // Tambahkan event listener untuk tombol Enter
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('password').addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    attemptLogin();
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

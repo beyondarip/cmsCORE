@@ -190,8 +190,8 @@ if DEBUG:
     ALLOWED_HOSTS = ['*']
 
 # Media files configuration
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'  # This will now be a Path object
+MEDIA_URL = '/fjowejao/'
+MEDIA_ROOT = BASE_DIR / 'fjowejao'  # This will now be a Path object
 print("MEDIA_ROOT = ", MEDIA_ROOT)
 
 # Make sure these directories exist

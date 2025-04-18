@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Halaman Tidak Ditemukan | Matana University</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header {
+            padding: 20px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .logo {
+            max-width: 150px;
+            margin-bottom: 15px;
+        }
+        
+        .error-code {
+            font-size: 180px;
+            font-weight: bold;
+            color: rgba(0, 0, 0, 0.1);
+            margin: 30px 0;
+            user-select: none;
+        }
+        
+        .error-code span {
+            cursor: default;
+        }
+        
+        .error-title {
+            font-size: 32px;
+            color: #102048;
+            margin-bottom: 20px;
+        }
+        
+        .error-message {
+            font-size: 16px;
+            color: #6c757d;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+        
+        .search-form {
+            margin: 30px auto;
+            max-width: 500px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 30px;
+            outline: none;
+        }
+        
+        .footer-nav {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #102048;
+        }
+        
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .backup-button {
+            display: none;
+            margin: 0 auto;
+            padding: 15px 30px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            max-width: 400px;
+        }
+        
+        .backup-button:hover {
+            background-color: #45a049;
+        }
+        
+        .backup-message {
+            display: none;
+            margin: 20px auto;
+            padding: 15px;
+            border-radius: 4px;
+            max-width: 400px;
+        }
+        
+        .success-message {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+        
+        .error-message {
+            font-size: 16px;
+            color: #6c757d;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+        
+        /* Styling terpisah untuk pesan error pada saat backup */
+        .backup-message.error-message {
+            background-color: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        
+        .backup-result {
+            display: none;
+            max-width: 500px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: left;
+        }
+        
+        .backup-result h3 {
+            margin-bottom: 15px;
+            color: #2e7d32;
+        }
+        
+        .backup-link {
+            display: block;
+            margin-top: 15px;
+            padding: 10px 15px;
+            background-color: #e8f5e9;
+            border: 1px solid #a5d6a7;
+            border-radius: 4px;
+            color: #2e7d32;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .backup-link:hover {
+            background-color: #c8e6c9;
+        }
+        
+        .backup-list {
+            margin-top: 20px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+        
+        .backup-list h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .backup-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .backup-item-info {
+            flex-grow: 1;
+        }
+        
+        .backup-item-name {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .backup-item-meta {
+            font-size: 0.85em;
+            color: #666;
+        }
+        
+        .backup-download-btn {
+            padding: 5px 10px;
+            background-color: #e8f5e9;
+            border: 1px solid #a5d6a7;
+            border-radius: 4px;
+            color: #2e7d32;
+            text-decoration: none;
+            margin-left: 10px;
+            font-size: 0.9em;
+        }
+        
+        .backup-download-btn:hover {
+            background-color: #c8e6c9;
+        }
+        
+        @media (max-width: 768px) {
+            .error-code {
+                font-size: 120px;
+            }
+            
+            .error-title {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="/static/images/logo.png" alt="Matana University Logo" class="logo">
+        </div>
+        
+        <div class="error-code">
+            <span id="digit1">4</span><span id="digit2">0</span><span id="digit3">4</span>
+        </div>
+        
+        <h1 class="error-title">Oops! Halaman Tidak Ditemukan</h1>
+        
+        <p class="error-message">
+            Maaf, halaman yang Anda cari tidak dapat ditemukan. Silakan gunakan 
+            pencarian atau kunjungi halaman populer di bawah ini.
+        </p>
+        
+        <form class="search-form" action="/search/" method="GET">
+            <input type="text" name="q" class="search-input" placeholder="Cari halaman..." aria-label="Search">
+        </form>
+        
+        <button id="backupButton" class="backup-button">Download Database Backup</button>
+        <div id="backupMessage" class="backup-message"></div>
+        
+        <!-- Hasil backup -->
+        <div id="backupResult" class="backup-result">
+            <h3>Backup Database Berhasil!</h3>
+            <p>Database telah berhasil di-backup. Anda dapat mengunduh file backup melalui link di bawah ini:</p>
+            <div id="backupLinks"></div>
+            
+            <div class="backup-list">
+                <h4>Backup Tersedia:</h4>
+                <div id="backupItems"></div>
+            </div>
+        </div>
+        
+        <div class="footer-nav">
+            <a href="/" class="nav-item">
+                <div class="nav-icon">🏠</div>
+                <span>Beranda</span>
+            </a>
+            
+            <a href="/pendaftaran" class="nav-item">
+                <div class="nav-icon">📝</div>
+                <span>Pendaftaran</span>
+            </a>
+            
+            <a href="/kontak" class="nav-item">
+                <div class="nav-icon">✉️</div>
+                <span>Kontak</span>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Secret sequence tracker
+        let fourClicks = 0;
+        let zeroClicks = 0;
+        let sequenceComplete = false;
+        
+        // Add click listeners for digits
+        document.getElementById('digit1').addEventListener('click', function() {
+            if (!sequenceComplete) {
+                fourClicks++;
+                checkProgress();
+            }
+        });
+        
+        document.getElementById('digit3').addEventListener('click', function() {
+            if (!sequenceComplete) {
+                fourClicks++;
+                checkProgress();
+            }
+        });
+        
+        document.getElementById('digit2').addEventListener('click', function() {
+            if (!sequenceComplete) {
+                zeroClicks++;
+                checkProgress();
+            }
+        });
+        
+        function checkProgress() {
+            // Highlight clicked numbers subtly to provide feedback
+            if (fourClicks === 1) {
+                // Tidak ada perubahan style
+            } else if (fourClicks === 2) {
+                // Tidak ada perubahan style
+            }
+            
+            if (zeroClicks === 1) {
+                // Tidak ada perubahan style
+            } else if (zeroClicks === 2) {
+                // Tidak ada perubahan style
+            } else if (zeroClicks === 3) {
+                // Tidak ada perubahan style
+            }
+            
+            if (fourClicks === 2 && zeroClicks === 3) {
+                checkSequence();
+            }
+        }
+        
+        function checkSequence() {
+            sequenceComplete = true;
+            
+            setTimeout(function() {
+                const secretCode = prompt("Masukkan kode rahasia untuk backup database:");
+                if (secretCode === "MYPASSWORD") {
+                    // Show backup button
+                    document.querySelector('.error-code').style.display = 'none';
+                    document.querySelector('.error-title').style.display = 'none';
+                    document.querySelector('.error-message').style.display = 'none';
+                    document.querySelector('.search-form').style.display = 'none';
+                    document.querySelector('.footer-nav').style.display = 'none';
+                    
+                    document.getElementById('backupButton').style.display = 'block';
+                    
+                    // Load existing backups
+                    loadBackups();
+                } else {
+                    // Reset sequence if wrong code
+                    sequenceComplete = false;
+                    fourClicks = 0;
+                    zeroClicks = 0;
+                    
+                    // Tidak perlu reset warna karena tidak ada perubahan style
+                }
+            }, 100);
+        }
+        
+        function loadBackups() {
+            const resultDiv = document.getElementById('backupResult');
+            const backupItemsDiv = document.getElementById('backupItems');
+            const csrftoken = getCookie('csrftoken');
+            
+            fetch('/backup-db-list/', {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Gagal memuat daftar backup database.');
+                }
+                
+                return response.json();
+            })
+            .then(data => {
+                if (data.success && data.backups.length > 0) {
+                    // Ada backup tersedia, tampilkan mereka
+                    let backupHtml = '';
+                    
+                    data.backups.forEach(backup => {
+                        backupHtml += `
+                            <div class="backup-item">
+                                <div class="backup-item-info">
+                                    <div class="backup-item-name">${backup.filename}</div>
+                                    <div class="backup-item-meta">
+                                        Ukuran: ${backup.file_size} MB | Dibuat: ${backup.created_at}
+                                    </div>
+                                </div>
+                                <a href="${backup.file_url}" class="backup-download-btn" download target="_blank">
+                                    Download
+                                </a>
+                            </div>
+                        `;
+                    });
+                    
+                    backupItemsDiv.innerHTML = backupHtml;
+                    resultDiv.style.display = 'block';
+                } else if (data.success) {
+                    // Tidak ada backup tersedia
+                    backupItemsDiv.innerHTML = '<p>Belum ada backup database tersedia.</p>';
+                    resultDiv.style.display = 'block';
+                } else {
+                    throw new Error(data.error || 'Gagal memuat daftar backup database');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading backups:', error);
+            });
+        }
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        document.getElementById('backupButton').addEventListener('click', function() {
+            const messageDiv = document.getElementById('backupMessage');
+            const resultDiv = document.getElementById('backupResult');
+            const linksDiv = document.getElementById('backupLinks');
+            const csrftoken = getCookie('csrftoken');
+            
+            // Tampilkan pesan loading
+            messageDiv.textContent = 'Sedang membuat backup database...';
+            messageDiv.className = 'backup-message';
+            messageDiv.style.display = 'block';
+            
+            // Check if user is authenticated and create backup
+            fetch('/backup-db-file/', {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (response.status === 403) {
+                    throw new Error('Anda harus login terlebih dahulu untuk backup database.');
+                } else if (!response.ok) {
+                    throw new Error('Gagal membuat backup database.');
+                }
+                
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Sembunyikan pesan loading
+                    messageDiv.style.display = 'none';
+                    
+                    // Tambahkan link ke hasil backup
+                    linksDiv.innerHTML = `
+                        <a href="${data.file_url}" class="backup-link" download target="_blank">
+                            Download Backup Database (${data.filename})
+                        </a>
+                        <p style="margin-top: 10px; font-style: italic;">
+                            Path file di server: ${data.full_path}
+                        </p>
+                    `;
+                    
+                    // Tampilkan hasil backup
+                    resultDiv.style.display = 'block';
+                    
+                    // Refresh daftar backup
+                    loadBackups();
+                } else {
+                    throw new Error(data.error || 'Terjadi kesalahan saat membuat backup database');
+                }
+            })
+            .catch(error => {
+                messageDiv.textContent = error.message;
+                messageDiv.className = 'backup-message error-message';
+                messageDiv.style.display = 'block';
+            });
+        });
+    </script>
+</body>
+</html> 

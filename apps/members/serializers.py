@@ -74,9 +74,15 @@ class ElementDetailSerializer(ElementSerializer):
         required=False,
         source='section'
     )
+    related_elements = serializers.SerializerMethodField()
     
     class Meta(ElementSerializer.Meta):
-        fields = ElementSerializer.Meta.fields + ['section_id']
+        fields = ElementSerializer.Meta.fields + ['section_id', 'related_elements']
+    
+    def get_related_elements(self, obj):
+        related = obj.get_related_elements()
+        return ElementSerializer(related, many=True).data
+
 
 class StudySessionSerializer(serializers.ModelSerializer):
     duration = serializers.DurationField(read_only=True)

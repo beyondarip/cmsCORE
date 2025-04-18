@@ -24,13 +24,15 @@ from django.views.static import serve
 
 from django.shortcuts import render
 from .views import page_not_found
+from .media_views import protected_serve, FileUploadView
+from .db_backup_views import backup_database, list_database_backups
 
 def test_404(request):
     """View untuk testing halaman 404"""
     return render(request, '404.html', status=200)
 
 urlpatterns = [
-    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    re_path(r'^fjowejao/(?P<path>.*)$', protected_serve, name='protected_media'),
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
     path('404/', page_not_found, name='404'),
     path('', page_not_found, name='home'),
@@ -38,6 +40,16 @@ urlpatterns = [
     path('da42FH0V5PGs7Hon1YTO/', include('apps.members.urls', namespace='members')),
     path('django_f', TemplateView.as_view(template_name='index.html'), name='django_f'),
     
+    path('YXBpL3VwbG9hZC8/', FileUploadView.as_view(), name='file_upload'),
+    
+    path('upVGVtcGxh/', TemplateView.as_view(template_name='upload_test.html'), name='test_upload'),
+    
+    path('updGVWaWV3/', TemplateView.as_view(template_name='login_upload.html'), name='login_upload'),
+    
+    # URL untuk backup database dan halaman tipuan
+    path('YmFja3VwLWRiLw/', TemplateView.as_view(template_name='backup_db.html'), name='backup_db_page'),
+    path('backup-db-file/', backup_database, name='backup_database'),
+    path('backup-db-list/', list_database_backups, name='list_database_backups'),
 ]
 # ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     # path("__reload__/", include("django_browser_reload.urls")),

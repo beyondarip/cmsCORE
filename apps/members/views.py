@@ -160,6 +160,21 @@ class ElementViewSet(viewsets.ModelViewSet):
                 {'error': 'Related element not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
+        @action(detail=True, methods=['post'])
+    def remove_related(self, request, pk=None):
+        """Remove a related element"""
+        element = self.get_object()
+        related_id = request.data.get('related_id')
+        relationship_type = request.data.get('relationship_type', None)
+        
+        if not related_id:
+            return Response(
+                {'error': 'related_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        element.remove_related_element(related_id, relationship_type)
+        return Response({'status': 'Related element removed'})
 
     @action(detail=False, methods=['get'])
     def uncategorized(self, request):
