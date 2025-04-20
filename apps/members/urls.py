@@ -82,6 +82,6 @@ urlpatterns = [
     path('upVGVtcGxh/', TemplateView.as_view(template_name='upload_test.html'), name='test_upload'),
     path('updGVWaWV3/', TemplateView.as_view(template_name='login_upload.html'), name='login_upload'),
     path('YmFja3VwLWRiLw/', TemplateView.as_view(template_name='backup_db.html'), name='backup_db_page'),
-    path('backup-db-file/', backup_database, name='backup_database'),
-    path('backup-db-list/', list_database_backups, name='list_database_backups'),
+    path('YmFja3VwLWRiLwDBF/', backup_database, name='backup_database'),
+    path('YmFja3VwLWRiLwDBL/', list_database_backups, name='list_database_backups'),
 ]
