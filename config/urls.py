@@ -36,7 +36,7 @@ def test_404(request):
 # Base URL patterns
 urlpatterns = [
     # Use function-based view for media serving
-    re_path(r'^fjowejao/(?P<path>.*)$', protected_serve, name='protected_media'),
+    re_path(r'^fjowejao2/(?P<path>.*)$', protected_serve, name='protected_media'),
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
     path('404/', page_not_found, name='404'),
     path('', home_view, name='home'),
