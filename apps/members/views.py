@@ -537,6 +537,8 @@ class StudyRecordViewSet(viewsets.ModelViewSet):
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db.models import Q
+import datetime
+import re
 
 class SearchView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -545,11 +547,40 @@ class SearchView(APIView):
         query = request.query_params.get('q', '')
         # if not query:
         #     return Response({'error': 'No search query provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create a base query for text search
+        text_query = (
+            Q(title__icontains=query) | 
+            Q(content__icontains=query) | 
+            Q(additional_content__icontains=query)
+        )
+        
+        # Check if query is in date format (YYYY-MM-DD)
+        date_query = Q()
+        date_pattern = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+        if date_pattern.match(query):
+            try:
+                # Parse the date
+                search_date = datetime.datetime.strptime(query, '%Y-%m-%d').date()
+                
+                # Create start and end of the day
+                start_datetime = datetime.datetime.combine(search_date, datetime.time.min)
+                end_datetime = datetime.datetime.combine(search_date, datetime.time.max)
+                
+                # Add date queries for created_at, updated_at and due_date
+                date_query = (
+                    Q(created_at__range=(start_datetime, end_datetime)) |
+                    Q(updated_at__range=(start_datetime, end_datetime)) |
+                    Q(due_date__range=(start_datetime, end_datetime))
+                )
+            except ValueError:
+                # If date parsing fails, just use the text search
+                pass
+        
+        # Combine text search and date search with OR operator
         elements = Element.objects.filter(
             Q(user=request.user) &
-            (Q(title__icontains=query) | 
-            Q(content__icontains=query) | 
-            Q(additional_content__icontains=query))
+            (date_query | text_query)
         )
         
         # Optional filtering by type
