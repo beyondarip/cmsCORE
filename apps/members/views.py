@@ -30,9 +30,9 @@ class HelloWorldAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
-# Add to the top of views.py
+# # filters.py atau di atas ElementFilter di views.py
 import django_filters
-from .models import Element
+from django.db.models import Q # Import Q object
 
 class ElementFilter(django_filters.FilterSet):
     created_after = django_filters.DateTimeFilter(field_name='created_at', lookup_expr='gte')
@@ -41,7 +41,22 @@ class ElementFilter(django_filters.FilterSet):
     updated_before = django_filters.DateTimeFilter(field_name='updated_at', lookup_expr='lte')
     due_after = django_filters.DateTimeFilter(field_name='due_date', lookup_expr='gte')
     due_before = django_filters.DateTimeFilter(field_name='due_date', lookup_expr='lte')
+
+    # Filter baru untuk tahun dan bulan pada due_date
+    due_year = django_filters.NumberFilter(field_name='due_date', lookup_expr='year')
+    due_month = django_filters.NumberFilter(field_name='due_date', lookup_expr='month')
     
+    # Anda juga bisa membuat filter kustom jika butuh logika yang lebih kompleks
+    # due_date_month_year = django_filters.CharFilter(method='filter_by_month_year')
+
+    # def filter_by_month_year(self, queryset, name, value):
+    #     # value diharapkan dalam format "YYYY-MM"
+    #     try:
+    #         year, month = map(int, value.split('-'))
+    #         return queryset.filter(due_date__year=year, due_date__month=month)
+    #     except ValueError:
+    #         return queryset # atau raise error
+
     class Meta:
         model = Element
         fields = {
@@ -50,6 +65,9 @@ class ElementFilter(django_filters.FilterSet):
             'is_archived': ['exact'],
             'is_favorite': ['exact'],
             'is_completed': ['exact'],
+            # Tambahkan field baru ke Meta jika Anda ingin mereka muncul di UI filter otomatis (seperti di DRF browsable API)
+            # 'due_year': ['exact'], # Tidak perlu 'exact' karena sudah didefinisikan di atas
+            # 'due_month': ['exact'],
         }
 
 
