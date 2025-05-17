@@ -32,6 +32,7 @@ class HelloWorldAPIView(APIView):
 
 # # filters.py atau di atas ElementFilter di views.py
 import django_filters
+from .models import Element
 from django.db.models import Q # Import Q object
 
 class ElementFilter(django_filters.FilterSet):
