@@ -372,11 +372,12 @@ class MultipleChoiceViewSet(viewsets.ModelViewSet):
 class TodoViewSet(viewsets.ModelViewSet):
     serializer_class = TodoSerializer
     pagination_class = FlexiblePagination
+    filterset_class = ElementFilter
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend, HierarchicalSectionFilterBackend]
     search_fields = ['title', 'content']
     ordering_fields = ['title', 'created_at', 'updated_at', 'order', 'due_date']
-    filterset_fields = ['section', 'tags', 'is_archived', 'is_favorite', 'is_completed']
+    #filterset_fields = ['section', 'tags', 'is_archived', 'is_favorite', 'is_completed']
     
     def get_queryset(self):
         # Only return todos created by the current user
