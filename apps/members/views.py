@@ -46,6 +46,16 @@ class ElementFilter(django_filters.FilterSet):
     # Filter baru untuk tahun dan bulan pada due_date
     due_year = django_filters.NumberFilter(field_name='due_date', lookup_expr='year')
     due_month = django_filters.NumberFilter(field_name='due_date', lookup_expr='month')
+
+    tags = django_filters.ModelMultipleChoiceFilter(
+        field_name='tags__id',  # Filter berdasarkan ID dari Tag
+        to_field_name='id',     # Gunakan field 'id' dari model Tag untuk mencocokkan
+        queryset=Tag.objects.all() # Queryset dasar untuk pilihan tag
+                                   # Ini bisa disesuaikan jika Anda ingin membatasi pilihan tag lebih lanjut,
+                                   # misal Tag.objects.filter(user=request.user) tapi itu lebih kompleks
+                                   # untuk diimplementasikan di FilterSet secara langsung.
+                                   # Keamanan data utama dihandle oleh queryset viewset.
+    )
     
     # Anda juga bisa membuat filter kustom jika butuh logika yang lebih kompleks
     # due_date_month_year = django_filters.CharFilter(method='filter_by_month_year')
